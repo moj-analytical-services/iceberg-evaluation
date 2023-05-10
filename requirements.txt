@@ -1,0 +1,5 @@
+jupyter
+boto3
+pandas
+aws-glue-sessions
+git+https://github.com/achimgaedke/py-aws-vault-auth.git

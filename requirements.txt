@@ -2,4 +2,5 @@ jupyter
 boto3
 pandas
 aws-glue-sessions
+nbstripout
 git+https://github.com/achimgaedke/py-aws-vault-auth.git

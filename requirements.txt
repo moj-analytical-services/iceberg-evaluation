@@ -1,5 +1,6 @@
 jupyter
 boto3
 pandas
+pydbtools
 aws-glue-sessions
 git+https://github.com/achimgaedke/py-aws-vault-auth.git

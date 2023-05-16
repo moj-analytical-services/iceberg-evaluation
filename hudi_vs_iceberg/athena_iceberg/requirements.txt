@@ -1,4 +1,0 @@
-pydbtools
-awswrangler
-jupyter
-duckdb

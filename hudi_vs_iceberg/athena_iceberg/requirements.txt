@@ -1,1 +1,4 @@
 pydbtools
+awswrangler
+jupyter
+duckdb

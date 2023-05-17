@@ -6,8 +6,8 @@
 
 Managed Pipelines uses an AWS Glue PySpark job to curate the data through a daily batch process:
 
-- Impute records which where deleted since the last upload, in case the extraction step was unable to determine on-going changes.
-- Implement a [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to retain the full history of data. When a row is updated or deleted on the source database, the current record on the AP is "closed" and a new record is inserted with the changed data values.
+- CDC changes - Implement a [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to retain the full history of data. When a row is updated or deleted on the source database, the current record on the AP is "closed" and a new record is inserted with the changed data values.
+- Full load to full load changes - Impute records which where deleted since the last upload, in case the extraction step was unable to determine on-going changes.
 
 The performance of the AWS Glue PySpark job has been degrading over the last few months, with monthly costs tripling. We would like to improve the Managed Pipeline curation step to make use of recent advancements.
 
@@ -79,10 +79,11 @@ There's no need to repeat any use cases already covered above.
 - [10, 100] columns
 
 **Criteria:**
-- Performance _ Number of data processing units (DPUs) used
+- Cost _ Glue/Spark is priced at $0.44 per data processing unit (DPU) per hour. Athena is priced at $5.00 per TB of scanned data.
+- Complexity / Readability _ How easy is it to understand what the code is doing? Can a problem be easily fixed?
 - Time _ Time it takes for job/query to complete
-- Cost _ Cost in $
-- Complexity _ Number of lines of code
+
+As these batch processes run over night, time is not as important as cost, although there is a direct relationship between time and cost for Glue/Spark. Complexity / Readability is quite subjective and can't be easily measured. Number of lines of code could be used as a proxy, but there is also a point where shorter code is lesss readable. 
 
 **Optimizations:**
 - Partitioning / File compaction

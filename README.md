@@ -15,6 +15,11 @@ The Apache Hudi and Iceberg frameworks for data lakes can simplify and enhance i
 
 This repository investigates the performance improvements and limitations of using different combinations of glue/athena with hudi/iceberg. Many articles already compare Hudi and Iceberg e.g. https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison. However we wanted to compare according to use cases relevant to the MoJ Analytical Platform.
 
+### Current file size
+Some analysis was carried out to get an idea of the curent volume of data that we are processing. Total (full load and cdc) file count and file size was collected for the raw history folders of both databases.
+
+![file_size](MPM_raw_hist_top20.png)
+
 ## Use Cases
 
 The tables below summarise the different uses cases and combinations of technologies they were compared against. For more details, please refer to the individual links.
@@ -83,7 +88,7 @@ There's no need to repeat any use cases already covered above.
 - Complexity / Readability _ How easy is it to understand what the code is doing? Can a problem be easily fixed?
 - Time _ Time it takes for job/query to complete
 
-As these batch processes run over night, time is not as important as cost, although there is a direct relationship between time and cost for Glue/Spark. Complexity / Readability is quite subjective and can't be easily measured. Number of lines of code could be used as a proxy, but there is also a point where shorter code is lesss readable. 
+As these batch processes run over night, time is not as important as cost, although there is a direct relationship between time and cost for Glue/Spark. Complexity / Readability is quite subjective and can't be easily measured. Number of lines of code could be used as a proxy, but there is also a point where shorter code is less readable. 
 
 **Optimizations:**
 - Partitioning / File compaction

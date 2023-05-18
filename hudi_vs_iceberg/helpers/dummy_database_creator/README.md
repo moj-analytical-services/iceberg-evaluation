@@ -1,5 +1,8 @@
 # Creating a dummy database for iceberg and hudi using Glue
 
+This code adapts the libraries found [here](https://github.com/aws-samples/aws-glue-test-data-generator)
+to create dummy databases and tables for hudi and iceberg.
+
 ## Prerequisites
 
 To run the dummy database creator locally you will need to:

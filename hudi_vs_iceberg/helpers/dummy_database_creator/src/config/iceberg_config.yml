@@ -1,0 +1,82 @@
+number_of_generated_records: 1000
+attributes_list:
+  - ColumnName: PK
+    Generator: key_generator
+    DataDescriptor:
+      Prefix: PKey_
+      LeadingZeros: 7
+  - ColumnName: SK
+    Generator: string_generator
+    DataDescriptor:
+      Pattern: SKey_#^X10
+  - ColumnName: ParentItemId
+    Generator: child_key_generator
+    DataDescriptor:
+      Prefix: PKey_
+      LeadingZeros: 7
+      ChildCountPerSublevel:
+        - 10
+        - 100
+        - 1000
+  - ColumnName: ItemType
+    Generator: string_generator
+    DataDescriptor:
+      Values:
+        - Elecotronic Part
+        - Mechnical Part
+        - Spare Part
+        - Harness
+        - Accessory
+  - ColumnName: ItemPrice
+    Generator: float_generator
+    DataDescriptor:
+      Expression: rand(42) * 3000
+  - ColumnName: Status
+    Generator: string_generator
+    DataDescriptor:
+      Values:
+        - OUT_OF_STOCK
+        - AVAILABLE
+        - ORDERED
+        - RETIRED
+  - ColumnName: PartNumber
+    Generator: string_generator
+    DataDescriptor:
+      Pattern: Part_#^A10
+  - ColumnName: SerialNumber
+    Generator: string_generator
+    DataDescriptor:
+      Random: 'True'
+      NumChar: 16
+  - ColumnName: ItemDetails
+    Generator: string_generator
+    DataDescriptor:
+      Pattern: 'Contact Details: Email: #^X8#__#^N2#@#^A4#.#^A3# Phone: #^N8'
+  - ColumnName: InsertDate
+    Generator: date_generator
+    DataDescriptor:
+      StartDate: 01/02/2001
+      EndDate: 01/03/2003
+  - ColumnName: ExpireDate
+    Generator: close_date_generator
+    DataDescriptor:
+      StartDateColumnName: InsertDate
+      CloseDateRangeInDays: 365
+  - ColumnName: internet_adress
+    Generator: ip_address_generator
+    DataDescriptor:
+      IpRanges:
+        - 9,10
+        - 1,254
+        - 1,128
+        - 2,20
+
+target_list:
+  - target: S3
+    attributes:
+      format: iceberg
+      bucket_name: alpha-everyone
+      bucket_prefix: datalake_formats_testing
+      database_name: test_iceberg_database
+      table_name: test_iceberg_table
+      partition: Status

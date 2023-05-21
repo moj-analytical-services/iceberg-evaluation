@@ -16,23 +16,30 @@
 
 ## Running Jupyter notebooks locally
 
-### Using a python kernel
-
-To populate
-
 ### Using a PySpark kernel
 
 [AWS Glue interactive sessions](https://docs.aws.amazon.com/glue/latest/dg/interactive-sessions-overview.html) provide an on-demand, highly-scalable, serverless Spark backend to Jupyter notebooks. This enables you to author code in your local environment and run it seamlessly on the interactive sessions backend.
 
-To install, follow these [instructions](https://docs.aws.amazon.com/glue/latest/dg/interactive-sessions.html#interative-sessions-windows-instructions).
+To install, follow these [instructions](https://docs.aws.amazon.com/glue/latest/dg/interactive-sessions.html#interative-sessions-windows-instructions). 
 
-### Using Jupyter extension for VSCode with aws-vault
+For more detailed instructions and a demo see [introducing-aws-glue-interactive-sessions-for-jupyter](https://aws.amazon.com/blogs/big-data/introducing-aws-glue-interactive-sessions-for-jupyter/).
 
-You can use [py-aws-vault-auth](https://github.com/achimgaedke/py-aws-vault-auth) to update the running process environment and authenticate for AWS services with [aws-vault](https://github.com/99designs/aws-vault) when using the Jupyter extension for VScode:
+### Using Jupyter extension for VSCode
+
+[Jupyter extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) provides basic Jupyter notebook support.
+
+For features and benefits of using the extension please refer to this [link](https://code.visualstudio.com/docs/datascience/jupyter-notebooks)
+
+To authenticate you will first need to obtain the AWS session tokens using aws-vault and save it to your .env file from the terminal:
 
 ```
-import py_aws_vault_auth
-import os
-environ_auth = py_aws_vault_auth.authenticate("sso-data-prod", prompt="python", return_as="environ")
-os.environ.update(environ_auth)
+aws-vault exec sso-sandbox
+env | grep AWS > .env
+```
+
+You then set these as environment variables in your jupyter notebook using the [dotenv](https://github.com/theskumar/python-dotenv) python module:
+
+```
+%load_ext dotenv
+%dotenv
 ```

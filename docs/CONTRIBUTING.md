@@ -43,3 +43,9 @@ You then set these as environment variables in your jupyter notebook using the [
 %load_ext dotenv
 %dotenv
 ```
+
+### Using the AWS Glue docker image
+
+Some parts of this repository have been developed using the AWS Glue docker image (e.g. the [dummy database creator](../hudi_vs_iceberg/helpers/dummy_database_creator/)). AWS guidance on how to use this image can be found [here](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html#develop-local-docker-image) and detailed instructions on its use in this repo can be found in each relevant subdirectory.
+
+Please note that when using AWS Vault you do not need to mount your local `.aws` directory. Rather you can pass your AWS environment variables when executing `docker run`.

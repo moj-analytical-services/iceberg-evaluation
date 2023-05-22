@@ -19,3 +19,5 @@
 - [Get started with Apache Hudi using AWS Glue](https://aws.amazon.com/blogs/big-data/part-1-get-started-with-apache-hudi-using-aws-glue-by-implementing-key-design-concepts/) How to get started with Apache Hudi on AWS glue and some available optimizations
 - [Native support for Apache Hudi, Delta Lake, and Apache Iceberg on AWS Glue](https://aws.amazon.com/blogs/big-data/part-1-getting-started-introducing-native-support-for-apache-hudi-delta-lake-and-apache-iceberg-on-aws-glue-for-apache-spark/)
 - [Using Iceberg and Athena](https://docs.aws.amazon.com/athena/latest/ug/querying-iceberg.html)
+- [AWS workshop demonstrating some of the main functionality of Athena with iceberg](https://catalog.us-east-1.prod.workshops.aws/workshops/9981f1a1-abdc-49b5-8387-cb01d238bb78/en-US/90-athena-acid)
+- [Documentation on developing with Glue locally using the official AWS Glue docker image](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html#develop-local-docker-image)

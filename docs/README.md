@@ -9,7 +9,7 @@ Managed Pipelines uses an AWS Glue PySpark job to curate the data through a dail
 - CDC changes - Implement a [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to retain the full history of data. When a row is updated or deleted on the source database, the current record on the AP is "closed" and a new record is inserted with the changed data values.
 - Full load changes - Impute records which where deleted since the last full or CDC load to ensure deletions are accurately recorded
 
-The performance of the AWS Glue PySpark job has been degrading over the last few months, with monthly costs tripling. We would like to improve the Managed Pipeline curation step to make use of recent advancements.
+The performance of the AWS Glue PySpark job has been degrading over the last few months, with monthly costs tripling. In addition, issues including large-volumes of missing-data and unexpected duplicates being introduced have occured, but given the complexity of the current job the root-cause could not be identified. We would like to improve the Managed Pipeline curation step to make use of recent advancements, reducing the complexity and creating a more efficient and maintainable solution.
 
 The Apache Hudi and Iceberg frameworks for data lakes can simplify and enhance incremental data processing (Note that Delta Lake by Databricks is also available but more compatible with the Databricks environment and hence disreguarded). AWS has also recently released [Athena version 3.0](https://aws.amazon.com/about-aws/whats-new/2022/10/amazon-athena-announces-upgraded-query-engine/) with performance improvements with additional [iceberg-related features](https://www.matano.dev/blog/2023/02/14/athena-v3-deep-dive). We may no longer need all the processing power of Spark, because we no longer need to read all the data to memory before being able to update.
 
@@ -76,7 +76,7 @@ Whilst it is possible to use glue to transform data, it is overly complicated fo
 3. Complexity / Readability _ How easy is it to understand what the code is doing? Can a problem be easily fixed?
 4. Time _ Time it takes for job/query to complete
 
-As these batch processes run over night, time is not as important as cost, although there is a direct relationship between time and cost for Glue/Spark. Complexity / Readability is quite subjective and can't be easily measured. Number of lines of code could be used as a proxy, but there is also a point where shorter code is less readable. 
+As these batch processes run over night, time is not as important as cost, although there is a direct relationship between time and cost for Glue/Spark. Complexity / Readability is quite subjective and can't be easily measured, we aim to identify a metric/metrics which can be used to compare the different solutions.
 
 **Optimizations:**
 - Partitioning / File compaction

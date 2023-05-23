@@ -1,0 +1,7 @@
+s3fs
+aiobotocore[boto3]
+pyarrow
+pandas
+pydbtools
+jupyter
+python-dotenv

@@ -1,0 +1,4 @@
+jupyter
+boto3
+aws-glue-sessions
+python-dotenv

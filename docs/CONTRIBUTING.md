@@ -28,6 +28,8 @@ For more detailed instructions and a demo see [introducing-aws-glue-interactive-
 
 [Jupyter extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) provides Jupyter notebook support, allowing you to make use of Visual Studio's features such Intellisense. For more features and benefits of using the extension please refer to this [link](https://code.visualstudio.com/docs/datascience/jupyter-notebooks).
 
+In order to be able to use the PySpark kernel, you might need to update the kernel specs following [these instructions](https://stackoverflow.com/questions/73994337/cannot-find-pyspark-kernel-aws-glue-interactive-sessions-with-vscode).
+
 To authenticate you will first need to obtain the AWS session tokens using aws-vault and save it to your .env file from the terminal:
 
 ```

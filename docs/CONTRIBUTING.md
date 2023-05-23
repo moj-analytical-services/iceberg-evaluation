@@ -12,23 +12,21 @@
 
 3.  Install the python dependencies
 
-        pip install -r requirements.txt
+        pip install -r requirements-python.txt
 
-## Running Jupyter notebooks locally
+This will allow you to run the Athena and pandas examples.
 
-### Using a PySpark kernel
+## AWS Glue Interactive session
 
 [AWS Glue interactive sessions](https://docs.aws.amazon.com/glue/latest/dg/interactive-sessions-overview.html) provide an on-demand, highly-scalable, serverless Spark backend to Jupyter notebooks. This enables you to author code in your local environment and run it seamlessly on the interactive sessions backend.
 
-To install, follow these [instructions](https://docs.aws.amazon.com/glue/latest/dg/interactive-sessions.html#interative-sessions-windows-instructions). 
+To install, follow these [instructions](https://docs.aws.amazon.com/glue/latest/dg/interactive-sessions.html#interative-sessions-windows-instructions). You will need to create a separate environment from the python environment. The python dependencies are saved in `requirements-spark.txt`.
 
 For more detailed instructions and a demo see [introducing-aws-glue-interactive-sessions-for-jupyter](https://aws.amazon.com/blogs/big-data/introducing-aws-glue-interactive-sessions-for-jupyter/).
 
-### Using Jupyter extension for VSCode
+## Using Jupyter extension for VSCode
 
-[Jupyter extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) provides basic Jupyter notebook support.
-
-For features and benefits of using the extension please refer to this [link](https://code.visualstudio.com/docs/datascience/jupyter-notebooks)
+[Jupyter extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) provides Jupyter notebook support, allowing you to make use of Visual Studio's features such Intellisense. For more features and benefits of using the extension please refer to this [link](https://code.visualstudio.com/docs/datascience/jupyter-notebooks).
 
 To authenticate you will first need to obtain the AWS session tokens using aws-vault and save it to your .env file from the terminal:
 

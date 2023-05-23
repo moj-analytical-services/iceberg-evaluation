@@ -1,6 +1,4 @@
 jupyter
 boto3
-pandas
-pydbtools
 aws-glue-sessions
 python-dotenv

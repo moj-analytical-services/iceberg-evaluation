@@ -24,6 +24,8 @@ To install, follow these [instructions](https://docs.aws.amazon.com/glue/latest/
 
 For more detailed instructions and a demo see [introducing-aws-glue-interactive-sessions-for-jupyter](https://aws.amazon.com/blogs/big-data/introducing-aws-glue-interactive-sessions-for-jupyter/).
 
+Warning: Remove any `default` profiles in your ~/.aws/config or ~/.aws/credentials otherwise the notebook will fail to provision a glue session. 
+
 ## Using Jupyter extension for VSCode
 
 [Jupyter extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) provides Jupyter notebook support, allowing you to make use of Visual Studio's features such Intellisense. For more features and benefits of using the extension please refer to this [link](https://code.visualstudio.com/docs/datascience/jupyter-notebooks).

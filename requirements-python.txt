@@ -5,3 +5,4 @@ pandas
 pydbtools
 jupyter
 python-dotenv
+black

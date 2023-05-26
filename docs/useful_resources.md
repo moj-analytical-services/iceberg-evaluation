@@ -4,6 +4,9 @@
 
 - [Hive Tables and What’s Next for Modern Data Platforms](https://bigdataboutique.com/blog/hive-tables-and-whats-next-for-modern-data-platforms-1xts1m) A high level introduction to Hive tables and issues they face
 - [Introduction Apache Hudi](https://bigdataboutique.com/blog/introduction-to-apache-hudi-c83367) A high level introduction to Hudi tables and DeltaStreamer
+- [Apache Iceberg on AWS with S3 and Athena](https://www.youtube.com/watch?v=iGvj1gjbwl0) 
+  - A useful introductory tutorial from Jonny Chivers on how Iceberg tables work and are different to Hive, and how to implement a database with Iceberg tables purely with Athena Presto SQL. 
+  - A supporting tutorial is [SQL for Athena](https://www.youtube.com/watch?v=V21xjnHMOyk) where he builds a database on S3 purely with AWS Athena with Presto SQL, but with Hive tables. 
 - [https://medium.com/expedia-group-tech/a-short-introduction-to-apache-iceberg-d34f628b6799](https://medium.com/expedia-group-tech/a-short-introduction-to-apache-iceberg-d34f628b6799) A dated but nice high level introduction to Iceberg tables
 
 ## Comparisons of Hudi and Iceberg

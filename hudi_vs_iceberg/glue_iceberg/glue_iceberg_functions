@@ -1,0 +1,50 @@
+from pyspark.sql import SparkSession, functions as F
+from pyspark.sql.types import StructType, StructField, IntegerType, Row
+import time
+
+
+def bulk_insert(input_filepath,output_directory,future_end_datetime):
+    start = time.time()
+    full_load=spark.read.option('header','true').parquet(input_filepath)
+    full_load = full_load.withColumn("start_datetime",F.col("extraction_timestamp"))
+    full_load = full_load.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
+    full_load = full_load.withColumn("op",F.lit("None"))
+    full_load = full_load.withColumn("is_current",F.lit(True))
+    full_load.sortWithinPartitions("product_name") \
+    .writeTo(output_directory) \
+    .create()
+    print(time.time()-start)
+
+
+
+
+
+
+
+ def scd2_simple(input_filepath, updates_filepath, output_directory, future_end_datetime, primary_key):
+    start = time.time()
+    full_load_updates = spark.read.option('header','true').parquet(updates_filepath)
+    full_load_updates = full_load_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
+    full_load_updates = full_load_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
+    full_load_updates = full_load_updates.withColumn("is_current",F.lit(True))
+
+    full_load_updates.createOrReplaceTempView(f"tmp_{table_name}_updates")
+    query = f"""
+    MERGE INTO {catalog_name}.{database_name}.{table_name} AS f
+    USING (SELECT * FROM tmp_{table_name}_updates) AS u
+    ON f.product_id = u.product_id
+    WHEN MATCHED THEN UPDATE SET f.end_datetime = u.extraction_timestamp, f.is_current = False 
+
+    """
+    spark.sql(query)
+    full_load_updates.writeTo(f"{catalog_name}.{database_name}.{table_name}").append()
+    print(time.time()-start)  
+
+
+
+
+def scd2_complex(input_filepath, updates_filepath, output_directory, future_end_datetime, primary_key):
+    start = time.time()
+    late_updates = spark.read.option('header','true').parquet(updates_filepath)
+    late_updates.writeTo(f"{catalog_name}.{database_name}.{table_name}").append()
+    print(time.time()-start) 

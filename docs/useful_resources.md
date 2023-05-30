@@ -25,6 +25,7 @@
   - A useful introductory tutorial from Jonny Chivers on how Iceberg tables work and are different to Hive, and how to implement a database with Iceberg tables purely with Athena Presto SQL. 
   - A supporting tutorial is [SQL for Athena](https://www.youtube.com/watch?v=V21xjnHMOyk) where he builds a database on S3 purely with AWS Athena with Presto SQL, but with Hive tables. 
 - [https://medium.com/expedia-group-tech/a-short-introduction-to-apache-iceberg-d34f628b6799](https://medium.com/expedia-group-tech/a-short-introduction-to-apache-iceberg-d34f628b6799) A dated but nice high level introduction to Iceberg tables
+- Both Hudi and Iceberg are compatible with AWS LakeFormation (including e.g. column and cell level access). See [here](https://docs.aws.amazon.com/lake-formation/latest/dg/otf-tutorial.html) for the official documentation. For a lab that implements LakeFormation permissions for Hudi see [here](https://catalog.us-east-1.prod.workshops.aws/workshops/976050cc-0606-4b23-b49f-ca7b8ac4b153/en-US/1200/1211-hudi-lakeformation-lab) and for Iceberg see [here](https://catalog.us-east-1.prod.workshops.aws/workshops/976050cc-0606-4b23-b49f-ca7b8ac4b153/en-US/1200/1212-iceberg-lakeformation-lab).
 
 ## Additional Resources
 - [Apache Iceberg 101](https://www.dremio.com/blog/apache-iceberg-101-your-guide-to-learning-apache-iceberg-concepts-and-practices/) Link to set of videos and additional resources on Apache Iceberg

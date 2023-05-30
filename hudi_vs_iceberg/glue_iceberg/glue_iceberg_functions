@@ -23,12 +23,14 @@ def bulk_insert(input_filepath,output_directory,future_end_datetime):
 
  def scd2_simple(input_filepath, updates_filepath, output_directory, future_end_datetime, primary_key):
     start = time.time()
+    # read updates, create the missing columns and populate
     full_load_updates = spark.read.option('header','true').parquet(updates_filepath)
     full_load_updates = full_load_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
     full_load_updates = full_load_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
     full_load_updates = full_load_updates.withColumn("is_current",F.lit(True))
 
     full_load_updates.createOrReplaceTempView(f"tmp_{table_name}_updates")
+    # query to update the extraction_timestamp column 
     query = f"""
     MERGE INTO {catalog_name}.{database_name}.{table_name} AS f
     USING (SELECT * FROM tmp_{table_name}_updates) AS u
@@ -37,6 +39,7 @@ def bulk_insert(input_filepath,output_directory,future_end_datetime):
 
     """
     spark.sql(query)
+    #append the updates table
     full_load_updates.writeTo(f"{catalog_name}.{database_name}.{table_name}").append()
     print(time.time()-start)  
 
@@ -49,7 +52,9 @@ def scd2_complex(input_filepath, late_updates_filepath, output_directory, future
     late_updates = late_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
     late_updates = late_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
     late_updates = late_updates.withColumn("is_current",F.lit(True))
+    #append the late updates with existing data
     late_updates.writeTo(output_directory).append()
+    # Query to create end_datetime column, partitioned by product id and order by start_datetime
     query1 = f"""
     SELECT product_id, product_name, price, extraction_timestamp, op, start_datetime,is_current,
     LEAD(start_datetime,1,TO_TIMESTAMP('2050-01-01 00:00:00')) OVER(PARTITION BY product_id ORDER BY start_datetime) AS end_datetime
@@ -60,6 +65,7 @@ def scd2_complex(input_filepath, late_updates_filepath, output_directory, future
     """
     spark.sql(query1)
     spark.sql(query1).writeTo(output_directory).overwritePartitions()
+    # creating is_current column 
     query2 = f"""
     SELECT product_id, product_name, price, extraction_timestamp, op, start_datetime,end_datetime,
     CASE WHEN end_datetime = '2050-01-01 00:00:00' THEN True ELSE False END AS is_current

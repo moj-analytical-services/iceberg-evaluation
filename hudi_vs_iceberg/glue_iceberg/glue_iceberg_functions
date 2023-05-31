@@ -10,8 +10,7 @@ def bulk_insert(input_filepath,output_directory,future_end_datetime):
     full_load = full_load.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
     full_load = full_load.withColumn("op",F.lit("None"))
     full_load = full_load.withColumn("is_current",F.lit(True))
-    full_load.sortWithinPartitions("product_name") \
-    .writeTo(output_directory) \
+    full_load.writeTo(output_directory) \
     .create()
     print(time.time()-start)
 
@@ -23,25 +22,22 @@ def bulk_insert(input_filepath,output_directory,future_end_datetime):
 
  def scd2_simple(input_filepath, updates_filepath, output_directory, future_end_datetime, primary_key):
     start = time.time()
-    # read updates, create the missing columns and populate
     full_load_updates = spark.read.option('header','true').parquet(updates_filepath)
     full_load_updates = full_load_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
     full_load_updates = full_load_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
     full_load_updates = full_load_updates.withColumn("is_current",F.lit(True))
 
     full_load_updates.createOrReplaceTempView(f"tmp_{table_name}_updates")
-    # query to update the extraction_timestamp column 
     query = f"""
     MERGE INTO {catalog_name}.{database_name}.{table_name} AS f
     USING (SELECT * FROM tmp_{table_name}_updates) AS u
-    ON f.product_id = u.product_id
+    ON f.{primary_key} = u.{primary_key}
     WHEN MATCHED THEN UPDATE SET f.end_datetime = u.extraction_timestamp, f.is_current = False 
 
     """
     spark.sql(query)
-    #append the updates table
     full_load_updates.writeTo(f"{catalog_name}.{database_name}.{table_name}").append()
-    print(time.time()-start)  
+    print(time.time()-start)
 
 
 

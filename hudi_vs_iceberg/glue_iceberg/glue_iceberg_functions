@@ -5,13 +5,13 @@ import time
 
 def bulk_insert(input_filepath,output_directory,future_end_datetime):
     start = time.time()
+    # read the bulk insert parquet file
     full_load=spark.read.option('header','true').parquet(input_filepath)
+    # adds 3 new columns
     full_load = full_load.withColumn("start_datetime",F.col("extraction_timestamp"))
     full_load = full_load.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
-    full_load = full_load.withColumn("op",F.lit("None"))
     full_load = full_load.withColumn("is_current",F.lit(True))
-    full_load.writeTo(output_directory) \
-    .create()
+    full_load.writeTo(output_directory).create()
     print(time.time()-start)
 
 
@@ -20,22 +20,27 @@ def bulk_insert(input_filepath,output_directory,future_end_datetime):
 
 
 
- def scd2_simple(input_filepath, updates_filepath, output_directory, future_end_datetime, primary_key):
+def scd2_simple(input_filepath, updates_filepath, output_directory, future_end_datetime, primary_key):
     start = time.time()
+    
+    # read the new updates parquet file
     full_load_updates = spark.read.option('header','true').parquet(updates_filepath)
+    # adds 3 new columns
     full_load_updates = full_load_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
     full_load_updates = full_load_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
     full_load_updates = full_load_updates.withColumn("is_current",F.lit(True))
-
+    full_load_updates = full_load_updates.limit(3)
     full_load_updates.createOrReplaceTempView(f"tmp_{table_name}_updates")
+    
+    # SQL querry to merge the new updates 
     query = f"""
     MERGE INTO {catalog_name}.{database_name}.{table_name} AS f
     USING (SELECT * FROM tmp_{table_name}_updates) AS u
     ON f.{primary_key} = u.{primary_key}
-    WHEN MATCHED THEN UPDATE SET f.end_datetime = u.extraction_timestamp, f.is_current = False 
-
+    WHEN MATCHED THEN UPDATE SET f.end_datetime = u.extraction_timestamp, f.is_current = False
     """
     spark.sql(query)
+    # append the new updates
     full_load_updates.writeTo(f"{catalog_name}.{database_name}.{table_name}").append()
     print(time.time()-start)
 
@@ -44,32 +49,36 @@ def bulk_insert(input_filepath,output_directory,future_end_datetime):
 
 def scd2_complex(input_filepath, late_updates_filepath, output_directory, future_end_datetime, primary_key):
     start = time.time()
+    # read the late updates parquet file
     late_updates = spark.read.option('header','true').parquet(late_updates_filepath)
+    # adds 3 new columns
     late_updates = late_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
     late_updates = late_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
     late_updates = late_updates.withColumn("is_current",F.lit(True))
-    #append the late updates with existing data
+    late_updates = late_updates.limit(3)
     late_updates.writeTo(output_directory).append()
-    # Query to create end_datetime column, partitioned by product id and order by start_datetime
+    spark.table(output_directory).drop("end_datetime","is_current").writeTo(output_directory).createOrReplace()
+    
+    # Query to update the extraction_timestamp column
     query1 = f"""
-    SELECT product_id, product_name, price, extraction_timestamp, op, start_datetime,is_current,
-    LEAD(start_datetime,1,TO_TIMESTAMP('2050-01-01 00:00:00')) OVER(PARTITION BY product_id ORDER BY start_datetime) AS end_datetime
+    SELECT *,
+    LEAD(extraction_timestamp,1,TO_TIMESTAMP('2050-01-01 00:00:00')) OVER(PARTITION BY {primary_key} ORDER BY extraction_timestamp) AS end_datetime
 
     FROM {catalog_name}.{database_name}.{table_name}
 
-    ORDER BY product_id, extraction_timestamp
+    ORDER BY {primary_key}, extraction_timestamp
     """
     spark.sql(query1)
-    spark.sql(query1).writeTo(output_directory).overwritePartitions()
-    # creating is_current column 
+    spark.sql(query1).writeTo(output_directory).createOrReplace()
+    
+    #Querry to update is_select column
     query2 = f"""
-    SELECT product_id, product_name, price, extraction_timestamp, op, start_datetime,end_datetime,
+    SELECT *,
     CASE WHEN end_datetime = '2050-01-01 00:00:00' THEN True ELSE False END AS is_current
-
     FROM {catalog_name}.{database_name}.{table_name}
-
-    ORDER BY product_id, extraction_timestamp
+    ORDER BY {primary_key}, extraction_timestamp
     """
     spark.sql(query2)
-    spark.sql(query2).writeTo(output_directory).overwritePartitions()
-    print(time.time()-start) 
+    
+    spark.sql(query2).writeTo(output_directory).createOrReplace()
+    print(time.time()-start)

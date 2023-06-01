@@ -64,11 +64,29 @@ Whilst it is possible to use glue to transform data, it is overly complicated fo
 |DML||||
 |Compatibility with existing tools||||
 
-### Benchmarks
+### Benchmarking
 
-**Volumes:**
-- [1K, 1M, 100M, 10B] rows
-- [10, 100] columns
+We will be using TPC-DS data on all use cases and the TPC-DS queries on the Data Modelling use cases.
+
+#### What is TPC-DS?
+
+From [Delta vs Iceberg vs hudi](https://databeans-blogs.medium.com/delta-vs-iceberg-vs-hudi-reassessing-performance-cb8157005eb0):
+
+[TPC-DS](https://www.tpc.org/tpcds/default5.asp) is a data warehousing benchmark defined by the Transaction Processing Performance Council ([TPC](https://www.tpc.org/default5.asp)). TPC is a non-profit organization founded by the database community in the late 1980s with the goal of developing benchmarks that may be used objectively to test database system performance by simulating real-world scenarios. “Decision support” is what the “DS” in TPC-DS stands for. The TPC-DS data consists of 25 tables which can vary in total size drom 1GB to 100TB. 
+There are 99 queries in total, ranging from simple aggregations to advanced pattern analysis.
+
+It has been used in several benchmarking exercises:
+
+- [Dive deep into AWS Glue 4.0 for Apache Spark](https://aws.amazon.com/blogs/big-data/dive-deep-into-aws-glue-4-0-for-apache-spark/) shows that glue 4.0 is 2.7 times more performant than glue 3.0
+- [Upgrade to Athena engine version 3](https://aws.amazon.com/blogs/big-data/upgrade-to-athena-engine-version-3-to-increase-query-performance-and-access-more-analytics-features/) shows that certain queries with Athena 3.0 can show upto 10 times performance compared with 2.0, and scanned byte reduced by 12 times with Iceberg
+
+#### Data Generation
+
+We will be using the [TPC-DS connector for AWS Glue](https://aws.amazon.com/marketplace/pp/prodview-xtty6azr4xgey) to generate the data.
+Note that the connector is only compatible with Glue 3.0 for the moment. For more details please refer to [tpcds-custom-connector-for-glue3](https://github.com/aws-samples/aws-glue-samples/tree/master/GlueCustomConnectors/development/Spark/glue-3.0/tpcds-custom-connector-for-glue3.0#readme).
+
+- Data Modelling use cases : 1GB
+- Data Engineering uses cases: `store_sales` table at 3TB, which equates to ~8B rows
 
 **Criteria:**
 1. Compatibility _ The proposed changes must be compatible with the existing Analytical Platform tool sets, for example dbt which is the recommended tool for creating derived tables

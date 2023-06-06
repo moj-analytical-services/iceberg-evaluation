@@ -1,0 +1,200 @@
+# settings and boilerplate code can go here (if its the same for all use cases)
+ 
+
+
+from pyspark.sql import SparkSession, functions as F
+from pyspark.sql.types import StructType, StructField, IntegerType, Row
+from pyspark.context import SparkConf
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.utils import getResolvedOptions
+import time
+
+
+
+
+
+
+    
+def bulk_insert(full_load_path,output_directory,future_end_datetime):
+    
+    # read the bulk insert parquet file
+    full_load=spark.read.parquet(full_load_path)
+    # adds 3 new columns
+    full_load = full_load.withColumn("start_datetime",F.col("extraction_timestamp"))
+    full_load = full_load.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
+    full_load = full_load.withColumn("op",F.lit("None"))
+    full_load = full_load.withColumn("is_current",F.lit(True))
+    full_load.writeTo(output_directory).createOrReplace()
+    
+    
+    
+
+
+def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary_key):
+
+    # read the new updates parquet file
+    full_load_updates = spark.read.option('header','true').parquet(updates_filepath)
+    # adds 3 new columns
+    full_load_updates = full_load_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
+    full_load_updates = full_load_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
+    full_load_updates = full_load_updates.withColumn("is_current",F.lit(True))
+    full_load_updates.createOrReplaceTempView(f"tmp_{table_name}_updates")
+    
+    # SQL query to merge the new updates 
+    query = f"""
+    MERGE INTO {catalog_name}.{dest_database_name}.{table_name} AS f
+    USING (SELECT * FROM tmp_{table_name}_updates) AS u
+    ON f.{primary_key} = u.{primary_key}
+    WHEN MATCHED THEN UPDATE SET f.end_datetime = u.extraction_timestamp, f.is_current = False
+    """
+    spark.sql(query)
+    # append the new updates
+    full_load_updates.writeTo(output_directory).append()
+ 
+    
+    
+def scd2_complex(updates_filepath, output_directory, future_end_datetime, primary_key):
+    
+    # read the late updates parquet file
+    late_updates = spark.read.parquet(updates_filepath)
+    # adds 3 new columns
+    late_updates = late_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
+    late_updates = late_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
+    late_updates = late_updates.withColumn("is_current",F.lit(True))
+    late_updates = late_updates.limit(3)
+    late_updates.writeTo(output_directory).append()
+    spark.table(output_directory).drop("end_datetime","is_current").writeTo(output_directory).createOrReplace()
+    
+    # Query to update the extraction_timestamp column
+    query1 = f"""
+    SELECT *,
+    LEAD(extraction_timestamp,1,TO_TIMESTAMP('2250-01-01 00:00:00')) OVER(PARTITION BY {primary_key} ORDER BY extraction_timestamp) AS end_datetime
+
+    FROM {catalog_name}.{dest_database_name}.{table_name}
+
+    ORDER BY {primary_key}, extraction_timestamp
+    """
+    spark.sql(query1)
+    spark.sql(query1).writeTo(output_directory).createOrReplace()
+    
+    #Querry to update is_select column
+    query2 = f"""
+    SELECT *,
+    CASE WHEN end_datetime = '2050-01-01 00:00:00' THEN True ELSE False END AS is_current
+    FROM {catalog_name}.{dest_database_name}.{table_name}
+    ORDER BY {primary_key}, extraction_timestamp
+    """
+    spark.sql(query2)
+    
+    spark.sql(query2).writeTo(output_directory).createOrReplace()
+    
+
+
+if __name__ == "__main__":
+    
+    import sys
+    import datetime
+    from pyspark.context import SparkContext
+    from awsglue.context import GlueContext
+    from awsglue.utils import getResolvedOptions
+    
+
+    # these are the arguments passed to the glue-job from step functions
+    # you dont need to include them if you dont want
+    # args = getResolvedOptions(sys.argv, ["use_case",
+    #                                      "bucket",
+    #                                      "output_key_base",
+    #                                      "table",
+    #                                      "primary_key",
+    #                                      "scale",
+    #                                      "proportion"
+    #                                      ])
+
+
+    
+    compute = "glue_iceberg"
+    # use_case = args.get("use_case")
+    # bucket = args.get("bucket")
+    # output_key_base = args.get("output_key_base")
+    # table = args.get("table")
+    # primary_key = args.get("primary_key")
+    
+    # scale = args.get("scale")
+    # proportion = args.get("proportion")
+    # str_proportion = str(proportion).replace(".", "_")
+    catalog_name = "glue_catalog"
+    use_case = "scd2_simple"
+    bucket = "sb-test-bucket-ireland"
+    output_key_base = "data-engineering-use-cases"
+    #s3://sb-test-bucket-ireland/data-engineering-use-cases/
+    table = "store_sales"
+    primary_key="pk"
+    scale=1
+    proportion=0.001
+    str_proportion = str(proportion).replace(".", "_")
+
+    full_load_path = f"s3://{bucket}/tpcds/scale={scale}/table={table}"
+    updates_filepath = f"s3://{bucket}/tpcds_updates/scale={scale}/table={table}/proportion={str_proportion}/"
+    warehouse = f"s3://{bucket}/{output_key_base}/compute={compute}/"
+    
+    
+    #output_data_directory = f"s3://{bucket}/{output_key_base}/compute={compute}/scale={scale}"
+    database_name = f"tpcds_{scale}"
+    dest_database_name = f"tpcds_{scale}_{compute}"
+    #scd2_type="simple"
+ 
+    table_name = f"{table}_{str_proportion}_{scd2_type}"
+    
+    future_end_datetime = datetime.datetime(2250, 1, 1)
+    output_directory = f"{catalog_name}.{dest_database_name}.{table_name}"
+    #output_directory =f"s3://{bucket}/{output_key_base}/compute={compute}/scale={scale}/"
+    
+    
+    
+    conf = SparkConf()
+    #conf.set("spark.default.parallelism", parallelism)
+    #conf.set("spark.sql.shuffle.partitions", parallelism)
+    conf.set("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+    conf.set(f"spark.sql.catalog.{catalog_name}.warehouse", f"{warehouse}") 
+    conf.set(f"spark.sql.catalog.{catalog_name}.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog") 
+    conf.set(f"spark.sql.catalog.{catalog_name}.io-impl", "org.apache.iceberg.aws.s3.S3FileIO") 
+    conf.set(f"spark.sql.catalog.{catalog_name}", "org.apache.iceberg.spark.SparkCatalog") 
+    glue_context = GlueContext(SparkContext.getOrCreate(conf=conf))
+    spark = glue_context.spark_session
+
+    # conf = SparkConf()
+    # sc = SparkContext()
+    # glue_context = GlueContext(sc)
+    
+    # spark = SparkSession.builder \
+    # .config("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")\
+    # .config(f"spark.sql.catalog.{catalog_name}.warehouse", f"{warehouse}") \
+    # .config(f"spark.sql.catalog.{catalog_name}.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog") \
+    # .config(f"spark.sql.catalog.{catalog_name}.io-impl", "org.apache.iceberg.aws.s3.S3FileIO") \
+    # .config(f"spark.sql.catalog.{catalog_name}", "org.apache.iceberg.spark.SparkCatalog") \
+    # .getOrCreate()
+    
+    query = f"""
+    CREATE DATABASE IF NOT EXISTS {catalog_name}.{dest_database_name}
+    """
+    spark.sql(query)
+    
+    
+    if use_case == "bulk_insert":
+        
+        # add any bulk_insert specific configs
+        
+        _ = bulk_insert(full_load_path,output_directory,future_end_datetime)
+    
+    if use_case == "scd2_simple":
+        
+        # add any scd2_simple specific configs
+    
+        _ = scd2_simple(updates_filepath, output_directory, future_end_datetime, primary_key)
+    
+    if use_case == "scd2_complex":
+        
+        # add any scd2_simple specific configs
+    
+        _ = scd2_complex(updates_filepath, output_directory, future_end_datetime, primary_key)

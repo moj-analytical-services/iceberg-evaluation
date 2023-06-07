@@ -1,6 +1,19 @@
 import awswrangler as wr
 import boto3
 import json
+import logging
+import sys
+import time
+
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+root.addHandler(handler)
+root.info("check")
 
 # settings and boilerplate code can go here (if its the same for all use cases) 
 def get_job_run_id():
@@ -17,24 +30,25 @@ def resp_to_s3(resp, job_run_id):
             Key=f"data-engineering-use-cases/compute=athena_iceberg/responses/{job_run_id}.json",
             Body=json.dumps(resp, indent=2, default=str))
 
-def run_queries(queries, database, workgroup):
+def run_queries(queries, workgroup):
     results = []
     for query in queries:
-        resp = wr.athena.start_query_execution(query, database=database, workgroup=workgroup, wait=True)
+        resp = wr.athena.start_query_execution(query, workgroup=workgroup, wait=True)
         results.append(resp)
         if resp['Status']['State'] == 'SUCCEEDED':
+            time.sleep(0.5)
             continue
         else:
             return 1
     return results
 
-def bulk_insert(**kwargs):
+def bulk_insert(dest_database_name, dest_ice_table_name, output_data_directory, future_end_datetime, source_database_name, source_table_name):
     create_db_sql = f"CREATE DATABASE IF NOT EXISTS {dest_database_name}"
     drop_dest_sql = f"DROP TABLE IF EXISTS {dest_database_name}.{dest_ice_table_name}"
     bulk_insert_sql = f"""
         CREATE TABLE IF NOT EXISTS {dest_database_name}.{dest_ice_table_name}
         WITH (table_type='ICEBERG',
-            location='{output_data_directory}{dest_ice_table_name}/',
+            location='{output_data_directory}{dest_database_name}/{dest_ice_table_name}/',
             format='PARQUET',
             is_external=false)
         AS SELECT
@@ -71,10 +85,10 @@ def bulk_insert(**kwargs):
     """
     job_run_id = get_job_run_id()
     queries = [create_db_sql, drop_dest_sql, bulk_insert_sql]
-    results = run_queries(queries, dest_database_name, workgroup)
+    results = run_queries(queries, workgroup)
     resp_to_s3(results, job_run_id)
 
-def scd2_simple(**kwargs):
+def scd2_simple(dest_database_name, dest_ice_table_name, source_database_name, update_table_name, primary_key, future_end_datetime):
     simple_insert_sql = f"""
         INSERT INTO {dest_database_name}.{dest_ice_table_name}
             SELECT
@@ -123,10 +137,10 @@ def scd2_simple(**kwargs):
     """
     job_run_id = get_job_run_id()
     queries = [simple_insert_sql, simple_merge_sql]
-    results = run_queries(queries, dest_database_name, workgroup)
+    results = run_queries(queries, workgroup)
     resp_to_s3(results, job_run_id)
     
-def scd2_complex(**kwargs):
+def scd2_complex(dest_database_name, dest_ice_table_name, source_database_name, update_table_name, complex_temp_tbl_name, output_data_directory):
     simple_insert_sql = f"""
         INSERT INTO {dest_database_name}.{dest_ice_table_name}
             SELECT
@@ -165,7 +179,7 @@ def scd2_complex(**kwargs):
     create_complex_temp_tbl_sql = f"""
         CREATE TABLE IF NOT EXISTS {dest_database_name}.{complex_temp_tbl_name}
         WITH (table_type='ICEBERG',
-        location='{output_data_directory}{complex_temp_tbl_name}/',
+        location='{output_data_directory}{dest_database_name}/{complex_temp_tbl_name}/',
         format='PARQUET',
         is_external=false)
         AS 
@@ -192,7 +206,7 @@ def scd2_complex(**kwargs):
     """
     job_run_id = get_job_run_id()
     queries = [simple_insert_sql, drop_complex_temp_tbl_sql, create_complex_temp_tbl_sql, complex_merge_sql, drop_complex_temp_tbl_sql]
-    results = run_queries(queries, dest_database_name, workgroup)
+    results = run_queries(queries, workgroup)
     resp_to_s3(results, job_run_id)
     
 if __name__ == "__main__":
@@ -211,7 +225,8 @@ if __name__ == "__main__":
                                          "proportion",
                                          "scd2_type"
                                          ])
-    
+    root.info(f"args:{str(args)}")
+    root.info(f"sys.argv: {str(sys.argv)}")
     compute = "athena_iceberg"
     use_case = args.get("use_case")
     bucket = args.get("bucket")
@@ -243,11 +258,10 @@ if __name__ == "__main__":
     
     
     if use_case == "bulk_insert":
-        _ = bulk_insert()
+        _ = bulk_insert(dest_database_name, dest_ice_table_name, output_data_directory, future_end_datetime, source_database_name, source_table_name)
     
     if use_case == "scd2_simple":
-        _ = scd2_simple()
+        _ = scd2_simple(dest_database_name, dest_ice_table_name, source_database_name, update_table_name, primary_key, future_end_datetime)
     
     if use_case == "scd2_complex":
-        _ = scd2_complex()
-        
+        _ = scd2_complex(dest_database_name, dest_ice_table_name, source_database_name, update_table_name, complex_temp_tbl_name, output_data_directory)

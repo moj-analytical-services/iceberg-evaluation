@@ -10,11 +10,13 @@ from awsglue.context import GlueContext
 from awsglue.utils import getResolvedOptions
 import time
 
-
-
-
-
-
+def _getOptionalResolvedOptions(arguments):
+    args_dict = {}
+    for i in range(1, len(arguments), 2):
+        arg_name = arguments[i].lstrip('--')
+        arg_value = arguments[i + 1]
+        args_dict[arg_name] = arg_value
+    return args_dict
     
 def bulk_insert(full_load_path,output_directory,future_end_datetime):
     
@@ -99,7 +101,7 @@ if __name__ == "__main__":
     from awsglue.context import GlueContext
     from awsglue.utils import getResolvedOptions
     
-
+    args = _getOptionalResolvedOptions(sys.argv)
     # these are the arguments passed to the glue-job from step functions
     # you dont need to include them if you dont want
     # args = getResolvedOptions(sys.argv, ["use_case",
@@ -108,73 +110,67 @@ if __name__ == "__main__":
     #                                      "table",
     #                                      "primary_key",
     #                                      "scale",
-    #                                      "proportion"
+    #                                      "proportion",
+    #                                      "str_proportion",
+    #                                      "scd2_type"
     #                                      ])
 
-
+    use_case = args.get("use_case", "bulk_insert")
+    bucket = args.get("bucket", "sb-test-bucket-ireland")
+    output_key_base = args.get("output_key_base", "data-engineering-use-cases")
+    table = args.get("table", "store_sales")
+    primary_key = args.get("primary_key", "pk")
+    scale = args.get("scale", 1)
+    proportion = args.get("proportion", 0.001)
+    str_proportion = str(proportion).replace(".", "_")
+    scd2_type = args.get("scd2_type", "complex")
     
     compute = "glue_iceberg"
-    # use_case = args.get("use_case")
+    # use_case = args.get("use_case","bulk_insert")
     # bucket = args.get("bucket")
     # output_key_base = args.get("output_key_base")
     # table = args.get("table")
     # primary_key = args.get("primary_key")
-    
     # scale = args.get("scale")
     # proportion = args.get("proportion")
     # str_proportion = str(proportion).replace(".", "_")
+    # scd2_type = args.get("scd2_type","simple")
+    
     catalog_name = "glue_catalog"
-    use_case = "scd2_simple"
-    bucket = "sb-test-bucket-ireland"
-    output_key_base = "data-engineering-use-cases"
-    #s3://sb-test-bucket-ireland/data-engineering-use-cases/
-    table = "store_sales"
-    primary_key="pk"
-    scale=1
-    proportion=0.001
-    str_proportion = str(proportion).replace(".", "_")
+    # use_case = "scd2_simple"
+    # bucket = "sb-test-bucket-ireland"
+    # output_key_base = "data-engineering-use-cases"
+    # #s3://sb-test-bucket-ireland/data-engineering-use-cases/
+    # table = "store_sales"
+    # primary_key="pk"
+    # scale=1
+    # proportion=0.001
+    # str_proportion = str(proportion).replace(".", "_")
 
     full_load_path = f"s3://{bucket}/tpcds/scale={scale}/table={table}"
     updates_filepath = f"s3://{bucket}/tpcds_updates/scale={scale}/table={table}/proportion={str_proportion}/"
     warehouse = f"s3://{bucket}/{output_key_base}/compute={compute}/"
-    
-    
-    #output_data_directory = f"s3://{bucket}/{output_key_base}/compute={compute}/scale={scale}"
     database_name = f"tpcds_{scale}"
     dest_database_name = f"tpcds_{scale}_{compute}"
-    #scd2_type="simple"
- 
-    table_name = f"{table}_{str_proportion}_{scd2_type}"
-    
+    table_name = f"{table}_{scale}_{str_proportion}_{scd2_type}"
     future_end_datetime = datetime.datetime(2250, 1, 1)
     output_directory = f"{catalog_name}.{dest_database_name}.{table_name}"
-    #output_directory =f"s3://{bucket}/{output_key_base}/compute={compute}/scale={scale}/"
+
     
     
     
     conf = SparkConf()
-    #conf.set("spark.default.parallelism", parallelism)
-    #conf.set("spark.sql.shuffle.partitions", parallelism)
     conf.set("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
     conf.set(f"spark.sql.catalog.{catalog_name}.warehouse", f"{warehouse}") 
     conf.set(f"spark.sql.catalog.{catalog_name}.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog") 
     conf.set(f"spark.sql.catalog.{catalog_name}.io-impl", "org.apache.iceberg.aws.s3.S3FileIO") 
     conf.set(f"spark.sql.catalog.{catalog_name}", "org.apache.iceberg.spark.SparkCatalog") 
     glue_context = GlueContext(SparkContext.getOrCreate(conf=conf))
+    logger = glue_context.get_logger()
+    logger.warn(f"{str(args)}")
+    logger.warn("output_directory")
     spark = glue_context.spark_session
-
-    # conf = SparkConf()
-    # sc = SparkContext()
-    # glue_context = GlueContext(sc)
-    
-    # spark = SparkSession.builder \
-    # .config("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")\
-    # .config(f"spark.sql.catalog.{catalog_name}.warehouse", f"{warehouse}") \
-    # .config(f"spark.sql.catalog.{catalog_name}.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog") \
-    # .config(f"spark.sql.catalog.{catalog_name}.io-impl", "org.apache.iceberg.aws.s3.S3FileIO") \
-    # .config(f"spark.sql.catalog.{catalog_name}", "org.apache.iceberg.spark.SparkCatalog") \
-    # .getOrCreate()
-    
+    # create the database
     query = f"""
     CREATE DATABASE IF NOT EXISTS {catalog_name}.{dest_database_name}
     """

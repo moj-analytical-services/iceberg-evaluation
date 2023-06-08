@@ -35,7 +35,11 @@ def get_query_cost(stats: list[dict], cost_per_tb: float=5.0) -> dict:
             query as set by aws. Defaults to 5.0.
 
     Returns:
-        dict: _description_
+        dict: {
+            "execution_time": the execution time of all queries combined in seconds,
+            "tb_scanned": the terrabytes scanned by all queries combined,
+            "cost": the cost (in dollars) of all queries combined
+        }
     """
 
     bytes_per_tb = 2**40

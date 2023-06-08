@@ -17,7 +17,7 @@ def get_job_cost(glue_client: boto3.client,
 
     Returns:
         dict: {
-            "num_workers": the of workers which ran the glue job,
+            "num_workers": the number of workers which ran the glue job,
             "execution_time": the execution time of the glue job,
             "dpu_seconds": the dpu-seconds used by the glue job,
             "cost": the cost of the glue-job in dollars

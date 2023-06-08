@@ -6,10 +6,10 @@ import sys
 import time
 
 root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+root.setLevel(logging.INFO)
 
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
+handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 root.addHandler(handler)
@@ -17,9 +17,8 @@ root.info("check")
 
 # settings and boilerplate code can go here (if its the same for all use cases) 
 def get_job_run_id():
-    glue_client = boto3.client("glue")
-    resp_runs = glue_client.get_job_runs(JobName = compute)
-    job_run_id = resp_runs["JobRuns"][0]["Id"]
+    datetime_str = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
+    job_run_id = f"{datetime_str}_{use_case}_{scd2_type}_{table}_{scale}_{proportion}"
     return job_run_id
 
 def resp_to_s3(resp, job_run_id):
@@ -36,7 +35,7 @@ def run_queries(queries, workgroup):
         resp = wr.athena.start_query_execution(query, workgroup=workgroup, wait=True)
         results.append(resp)
         if resp['Status']['State'] == 'SUCCEEDED':
-            time.sleep(0.5)
+            #time.sleep(0.5)
             continue
         else:
             return 1
@@ -48,7 +47,7 @@ def bulk_insert(dest_database_name, dest_ice_table_name, output_data_directory, 
     bulk_insert_sql = f"""
         CREATE TABLE IF NOT EXISTS {dest_database_name}.{dest_ice_table_name}
         WITH (table_type='ICEBERG',
-            location='{output_data_directory}{dest_database_name}/{dest_ice_table_name}/',
+            location='{output_data_directory}{dest_database_name}/{dest_ice_table_name}',
             format='PARQUET',
             is_external=false)
         AS SELECT
@@ -179,7 +178,7 @@ def scd2_complex(dest_database_name, dest_ice_table_name, source_database_name, 
     create_complex_temp_tbl_sql = f"""
         CREATE TABLE IF NOT EXISTS {dest_database_name}.{complex_temp_tbl_name}
         WITH (table_type='ICEBERG',
-        location='{output_data_directory}{dest_database_name}/{complex_temp_tbl_name}/',
+        location='{output_data_directory}{dest_database_name}/{complex_temp_tbl_name}',
         format='PARQUET',
         is_external=false)
         AS 

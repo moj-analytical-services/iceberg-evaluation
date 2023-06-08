@@ -52,7 +52,10 @@ def get_query_cost(stats: list[dict], cost_per_tb: float=5.0) -> dict:
 
 
 def lambda_handler(event, context):
-
+    """
+    this lambda function reads the statistics of one or more athena queries from a json stored
+    in s3 and calcultes the total execution_time, terrabytes-scanned and cost (in dollars)
+    """
 
     s3 = boto3.client("s3")
 

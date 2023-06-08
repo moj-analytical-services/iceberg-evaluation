@@ -52,6 +52,11 @@ def get_job_cost(glue_client: boto3.client,
 
 
 def lambda_handler(event, context):
+    """
+    this lambda function uses the GetJobRun api to return metrics for a given glue job, from this
+    it calculates the total cost of the job (in dollars) and returns alongside other metrics
+    (num_workers, execution_time, dpu_seconds)
+    """
 
     glue_client = boto3.client("glue")
 

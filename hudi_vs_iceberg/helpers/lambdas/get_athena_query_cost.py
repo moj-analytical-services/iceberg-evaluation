@@ -64,11 +64,19 @@ def lambda_handler(event, context):
     response_path =  "/compute=athena_iceberg/responses/"
     key = f"{args['--output_key_base']}{response_path}"
 
+    use_case = args["--use_case"]
+    scd2_type = args["--scd2_type"]
+    table = args["--table"]
+    scale = args["--scale"]
+    proportion = str(args["--proportion"]).replace(".", "_")
+
+    filename = f"{use_case}_{scd2_type}_{table}_{scale}_{proportion}"
+
     stats = load_stats(
         glue_client=s3,
         bucket=args["--bucket"],
         key=key,
-        filename=event["glue_job_id"]
+        filename=filename
         )
 
     costs = get_query_cost(stats)

@@ -6,67 +6,62 @@ import sys
 import time
 
 root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+root.setLevel(logging.INFO)
 
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 root.addHandler(handler)
-root.info("check")
 
 # settings and boilerplate code can go here (if its the same for all use cases) 
 def get_job_run_id():
     job_run_id = f"{use_case}_{scd2_type}_{table}_{scale}_{str_proportion}"
     return job_run_id
 
+def run_queries(queries, workgroup, bucket=None, table_dest_s3_key=None):
+    results = []
+    for query in queries:
+        root.info(f"run_queries: Running query: {query}")
+        resp = wr.athena.start_query_execution(query, workgroup=workgroup, wait=True)
+        results.append(resp)
+        if resp['Status']['State'] == 'SUCCEEDED':
+            if "DROP TABLE" in query and "_TEMP" not in query:
+                root.info(f"run_queries: Sucessfully run DROP ICE DEST TABLE script, now checking folder to delete any residual keys")
+                clean_dest_folder(bucket, table_dest_s3_key)
+            #time.sleep(0.5)
+            continue
+        else:
+            root.error(f"run_queries: Failed to run query: {query}")
+            return 1
+    return results
+
 def resp_to_s3(resp, job_run_id):
+    root.info("""resp_to_s3: writing Athena response to s3 bucket.""")
     client = boto3.client('s3')
     client.put_object(
             Bucket=bucket, 
             #Key=f'{output_data_key}responses/{job_run_id}.json',
             Key=f"data-engineering-use-cases/compute=athena_iceberg/responses/{job_run_id}.json",
             Body=json.dumps(resp, indent=2, default=str))
-
-def run_queries(queries, workgroup):
-    results = []
-    for query in queries:
-        resp = wr.athena.start_query_execution(query, workgroup=workgroup, wait=True)
-        results.append(resp)
-        if resp['Status']['State'] == 'SUCCEEDED':
-            #time.sleep(0.5)
-            continue
-        else:
-            return 1
-    return results
     
-def clean_dest_folder(bucket, table_dest_folder):
-    client = boto3.client('s3')
-    obj_list_resp = client.list_objects_v2(Bucket=bucket, Prefix=table_dest_folder)
-    root.info(f"""Object list from destination table folder {table_dest_folder}:
-        {obj_list_resp}""")
-    for obj in obj_list_resp['Contents']:
-        client.delete_object(Bucket=bucket, Key=obj['Key'])
-        root.info(f"Deleted {obj['Key']}")
+def clean_dest_folder(bucket, table_dest_s3_key):
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(bucket)
+    objs = bucket.objects.filter(Prefix=table_dest_s3_key)
+    root.info(f"""clean_dest_folder: Deleting the following object keys from {bucket}:
+        {[obj.key for obj in objs]}""")
+    objs.delete()
 
-def bulk_insert(bucket, dest_database_name, dest_ice_table_name, output_data_directory, future_end_datetime, source_database_name, source_table_name):
-    table_dest_folder = f"{output_data_directory}{dest_database_name}/{dest_ice_table_name}"
-    root.info(f"""Vars recieved to bulk insert:
-        bucket: {bucket}
-        dest_database_name: {dest_database_name}
-        dest_ice_table_name: {dest_ice_table_name}
-        output_data_directory: {output_data_directory}
-        future_end_datetime: {future_end_datetime}
-        source_database_name: {source_database_name}
-        source_table_name: {source_table_name}
-        table_dest_folder: {table_dest_folder}
-        """)
+def bulk_insert(bucket, dest_database_name, dest_ice_table_name, table_dest_s3_path, future_end_datetime, source_database_name, source_table_name):
+    table_dest_s3_key = table_dest_s3_path.replace(f's3://{bucket}/','')
+    root.info(f"""bulk_insert: Current glue job is Bulk Insert""")
     create_db_sql = f"CREATE DATABASE IF NOT EXISTS {dest_database_name};"
-    drop_dest_sql = f"DROP TABLE IF EXISTS {dest_database_name}.{dest_ice_table_name} PURGE;"
+    drop_dest_sql = f"DROP TABLE IF EXISTS {dest_database_name}.{dest_ice_table_name};"
     bulk_insert_sql = f"""
         CREATE TABLE IF NOT EXISTS {dest_database_name}.{dest_ice_table_name}
         WITH (table_type='ICEBERG',
-            location='{table_dest_folder}',
+            location='{table_dest_s3_path}',
             format='PARQUET',
             is_external=false)
         AS SELECT
@@ -102,12 +97,12 @@ def bulk_insert(bucket, dest_database_name, dest_ice_table_name, output_data_dir
         FROM {source_database_name}.{source_table_name} src;
     """
     job_run_id = get_job_run_id()
-    clean_dest_folder(bucket, table_dest_folder)
     queries = [create_db_sql, drop_dest_sql, bulk_insert_sql]
-    results = run_queries(queries, workgroup)
+    results = run_queries(queries, workgroup, bucket, table_dest_s3_key)
     resp_to_s3(results, job_run_id)
 
 def scd2_simple(dest_database_name, dest_ice_table_name, source_database_name, update_table_name, primary_key, future_end_datetime):
+    root.info(f"""scd2_simple: Current glue job is SCD2 Simple""")
     simple_insert_sql = f"""
         INSERT INTO {dest_database_name}.{dest_ice_table_name}
             SELECT
@@ -160,6 +155,7 @@ def scd2_simple(dest_database_name, dest_ice_table_name, source_database_name, u
     resp_to_s3(results, job_run_id)
     
 def scd2_complex(dest_database_name, dest_ice_table_name, source_database_name, update_table_name, complex_temp_tbl_name, output_data_directory):
+    root.info(f"""scd2_complex: Current glue job is SCD2 Complex""")
     simple_insert_sql = f"""
         INSERT INTO {dest_database_name}.{dest_ice_table_name}
             SELECT
@@ -224,9 +220,9 @@ def scd2_complex(dest_database_name, dest_ice_table_name, source_database_name, 
                     SET end_datetime = tmp.end_datetime_lead,
                         is_current = tmp.is_current;
     """
-    drop_dest_sql = f"DROP TABLE IF EXISTS {dest_database_name}.{dest_ice_table_name} PURGE;"
+    drop_dest_sql = f"DROP TABLE IF EXISTS {dest_database_name}.{dest_ice_table_name};"
     job_run_id = get_job_run_id()
-    queries = [simple_insert_sql, drop_complex_temp_tbl_sql, create_complex_temp_tbl_sql, complex_merge_sql, drop_complex_temp_tbl_sql, drop_dest_sql]
+    queries = [simple_insert_sql, drop_complex_temp_tbl_sql, create_complex_temp_tbl_sql, complex_merge_sql, drop_complex_temp_tbl_sql]
     results = run_queries(queries, workgroup)
     resp_to_s3(results, job_run_id)
     
@@ -246,8 +242,6 @@ if __name__ == "__main__":
                                          "proportion",
                                          "scd2_type"
                                          ])
-    root.info(f"args:{str(args)}")
-    root.info(f"sys.argv: {str(sys.argv)}")
     compute = "athena_iceberg"
     use_case = args.get("use_case")
     bucket = args.get("bucket")
@@ -273,13 +267,14 @@ if __name__ == "__main__":
     dest_ice_table_name = f"{table}_{scale}_{str_proportion}_{scd2_type}"
     update_table_name = f"{table}_{str_proportion}"
     complex_temp_tbl_name = f"{dest_ice_table_name}_TEMP"
+    table_dest_s3_path = f"{output_data_directory}{dest_database_name}/{dest_ice_table_name}" 
     
     # db suggested - datetime.datetime(2250, 1, 1), but cant be botehred testing ICEBERG CAST
     future_end_datetime = '2250-01-01' 
     
     
     if use_case == "bulk_insert":
-        _ = bulk_insert(bucket, dest_database_name, dest_ice_table_name, output_data_directory, future_end_datetime, source_database_name, source_table_name)
+        _ = bulk_insert(bucket, dest_database_name, dest_ice_table_name, table_dest_s3_path, future_end_datetime, source_database_name, source_table_name)
     
     if use_case == "scd2_simple":
         _ = scd2_simple(dest_database_name, dest_ice_table_name, source_database_name, update_table_name, primary_key, future_end_datetime)

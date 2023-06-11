@@ -1,7 +1,7 @@
 # settings and boilerplate code can go here (if its the same for all use cases)
  
-
-
+import sys
+import boto3
 from pyspark.sql import SparkSession, functions as F
 from pyspark.sql.types import StructType, StructField, IntegerType, Row
 from pyspark.context import SparkConf
@@ -28,6 +28,7 @@ def bulk_insert(full_load_path,output_directory,future_end_datetime):
     full_load = full_load.withColumn("op",F.lit("None"))
     full_load = full_load.withColumn("is_current",F.lit(True))
     full_load.writeTo(output_directory).createOrReplace()
+    #full_load.writeTo(output_directory).create()
     
     
     
@@ -152,10 +153,11 @@ if __name__ == "__main__":
     warehouse = f"s3://{bucket}/{output_key_base}/compute={compute}/"
     database_name = f"tpcds_{scale}"
     dest_database_name = f"tpcds_{scale}_{compute}"
-    table_name = f"{table}_{scale}_{str_proportion}_{scd2_type}"
+    table_name = f"{table}_{str_proportion}_{scd2_type}"
     future_end_datetime = datetime.datetime(2250, 1, 1)
     output_directory = f"{catalog_name}.{dest_database_name}.{table_name}"
-
+    #folder = "data-engineering-use-cases/compute=glue_iceberg/tpcds_1_glue_iceberg.db/store_sales_1_0_001_simple/"
+    folder = f"{output_key_base}/compute={compute}/{dest_database_name}.db/{table_name}/"
     
     
     
@@ -170,6 +172,17 @@ if __name__ == "__main__":
     logger.warn(f"{str(args)}")
     logger.warn("output_directory")
     spark = glue_context.spark_session
+    
+    #Delete if table exists
+    query = f"""
+    DROP TABLE IF EXISTS {catalog_name}.{dest_database_name}.{table_name}
+    """
+    spark.sql(query)
+    ## Delete files in S3
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(bucket)
+    bucket.objects.filter(Prefix=folder).delete()
+    
     # create the database
     query = f"""
     CREATE DATABASE IF NOT EXISTS {catalog_name}.{dest_database_name}

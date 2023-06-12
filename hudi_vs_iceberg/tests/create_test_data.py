@@ -1,19 +1,20 @@
 # %%
 # For running in a glue interactive session
-# %load_ext dotenv
-# %dotenv
-# %iam_role arn:aws:iam::684969100054:role/AdminAccessGlueNotebook
-# %region eu-west-1
-# %session_id_prefix pandas-
-# %glue_version 3.0
-# %idle_timeout 60
-# %worker_type G.1X
-# %number_of_workers 2
+%load_ext dotenv
+%dotenv
+%iam_role arn:aws:iam::684969100054:role/AdminAccessGlueNotebook
+%region eu-west-1
+%session_id_prefix test-data-
+%glue_version 3.0
+%idle_timeout 60
+%worker_type G.1X
+%number_of_workers 2
 # %%
 from awsglue.transforms import *
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 
+from awsglue.dynamicframe import DynamicFrame
 import pyspark.sql.functions as f
 from pyspark.sql.types import *
 import boto3
@@ -25,16 +26,34 @@ glue_context = GlueContext(sc)
 spark = glue_context.spark_session
 
 # %%
-directory = "data/" # "s3://sb-test-bucket-ireland/test-data/" 
-full_load_path = f"{directory}store_sales"
-cdc_path_1 = f"{directory}cdc_1"
-cdc_path_2 = f"{directory}cdc_2"
-cdc_path_3 = f"{directory}cdc_3"
-bulk_insert_path = f"{directory}bulk_insert"
-update_path_1 = f"{directory}update_1"
-update_path_2 = f"{directory}update_2"
-update_path_3 = f"{directory}update_3"
+database_name = "tpcds_test"
+bucket_name = "sb-test-bucket-ireland"
+input_tables = ["full_load", "cdc_1", "cdc_2", "cdc_3"]
+expected_data = ["bulk_insert", "update_1", "update_2", "update_3"]
 
+try:
+    glue = boto3.client("glue")
+    glue.create_database(DatabaseInput={"Name": database_name})
+    print(f"New database {database_name} created")
+except glue.exceptions.AlreadyExistsException:
+    print(f"Database {database_name} already exist")
+
+## Delete files in S3
+s3 = boto3.resource("s3")
+bucket = s3.Bucket(bucket_name)
+bucket.objects.filter(Prefix=f"{database_name}/").delete()
+
+## Drop table in Glue Data Catalog
+for t in input_tables:
+    try:
+        glue = boto3.client("glue")
+        glue.delete_table(DatabaseName=database_name, Name=t)
+        print(f"Table {database_name}.{t} deleted")
+    except glue.exceptions.EntityNotFoundException:
+        print(f"Table {database_name}.{t} does not exist")
+
+# %%
+directory = f"s3://{bucket_name}/{database_name}"  # "data"
 
 full_load_extraction_timestamp = datetime(2022, 1, 1)
 cdc_extraction_timestamp_1 = datetime(2022, 2, 1)
@@ -120,12 +139,7 @@ full_load_data = [
         "extraction_timestamp": full_load_extraction_timestamp,
     },
 ]
-full_load_df = spark.createDataFrame(full_load_data, schema=schema)
-full_load_df.repartition(1).write.parquet(full_load_path)
-pd.read_parquet(full_load_path)
 
-# %%
-# update
 cdc_data_1 = [
     {
         "pk": "A",
@@ -134,12 +148,7 @@ cdc_data_1 = [
         "op": "U",
     },
 ]
-cdc_df_1 = spark.createDataFrame(cdc_data_1, schema=schema)
-cdc_df_1.repartition(1).write.parquet(cdc_path_1)
-pd.read_parquet(cdc_path_1)
 
-# %%
-# insert
 cdc_data_2 = [
     {
         "pk": "C",
@@ -148,12 +157,7 @@ cdc_data_2 = [
         "op": "I",
     },
 ]
-cdc_df_2 = spark.createDataFrame(cdc_data_2, schema=schema)
-cdc_df_2.repartition(1).write.parquet(cdc_path_2)
-pd.read_parquet(cdc_path_2)
 
-# %%
-# late arriving
 cdc_data_3 = [
     {
         "pk": "A",
@@ -162,9 +166,20 @@ cdc_data_3 = [
         "op": "U",
     },
 ]
-cdc_df_3 = spark.createDataFrame(cdc_data_3, schema=schema)
-cdc_df_3.repartition(1).write.parquet(cdc_path_3)
-pd.read_parquet(cdc_path_3)
+# %%
+for data, t in zip([full_load_data, cdc_data_1, cdc_data_2, cdc_data_3], input_tables):
+    df = spark.createDataFrame(data, schema=schema)
+    dyf = DynamicFrame.fromDF(df, glue_context, "dyf")
+    sink = glue_context.getSink(
+        connection_type="s3",
+        path=f"{directory}/{t}",
+        enableUpdateCatalog=True,
+        updateBehavior="UPDATE_IN_DATABASE",
+    )
+    sink.setFormat("glueparquet")
+    sink.setCatalogInfo(catalogDatabase=database_name, catalogTableName=t)
+    sink.writeFrame(dyf)
+
 
 # %%
 bulk_insert_data = [
@@ -185,11 +200,6 @@ bulk_insert_data = [
         "is_current": True,
     },
 ]
-bulk_insert_df = spark.createDataFrame(bulk_insert_data, schema=schema_output)
-bulk_insert_df.repartition(1).write.parquet(bulk_insert_path)
-pd.read_parquet(bulk_insert_path)
-
-# %%
 update_data_1 = [
     {
         "pk": "A",
@@ -217,11 +227,6 @@ update_data_1 = [
         "is_current": True,
     },
 ]
-update_df_1 = spark.createDataFrame(update_data_1, schema=schema_output)
-update_df_1.repartition(1).write.parquet(update_path_1)
-pd.read_parquet(update_path_1)
-
-# %%
 update_data_2 = [
     {
         "pk": "A",
@@ -258,11 +263,6 @@ update_data_2 = [
         "is_current": True,
     },
 ]
-update_df_2 = spark.createDataFrame(update_data_2, schema=schema_output)
-update_df_2.repartition(1).write.parquet(update_path_2)
-pd.read_parquet(update_path_2)
-
-# %%
 update_data_3 = [
     {
         "pk": "A",
@@ -308,8 +308,19 @@ update_data_3 = [
         "is_current": True,
     },
 ]
-update_df_3 = spark.createDataFrame(update_data_3, schema=schema_output)
-update_df_3.repartition(1).write.parquet(update_path_3)
-pd.read_parquet(update_path_3)
-
-
+for data, t in zip(
+    [bulk_insert_data, update_data_1, update_data_2, update_data_3], expected_data
+):
+    # df = spark.createDataFrame(data, schema=schema_output)
+    # df.repartition(1).write.parquet(f"{directory}/{t}")
+    df = spark.createDataFrame(data, schema=schema)
+    dyf = DynamicFrame.fromDF(df, glue_context, "dyf")
+    sink = glue_context.getSink(
+        connection_type="s3",
+        path=f"{directory}/{t}",
+        enableUpdateCatalog=True,
+        updateBehavior="UPDATE_IN_DATABASE",
+    )
+    sink.setFormat("glueparquet")
+    sink.setCatalogInfo(catalogDatabase=database_name, catalogTableName=t)
+    sink.writeFrame(dyf)

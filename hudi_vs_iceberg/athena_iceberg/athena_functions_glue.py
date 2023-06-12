@@ -55,6 +55,7 @@ def clean_dest_folder(bucket, table_dest_s3_key):
 
 def bulk_insert(bucket, dest_database_name, dest_ice_table_name, table_dest_s3_path, future_end_datetime, source_database_name, source_table_name):
     table_dest_s3_key = table_dest_s3_path.replace(f's3://{bucket}/','')
+    root.info(f'All my tears have been used up on another log')
     root.info(f"""bulk_insert: Current glue job is Bulk Insert""")
     create_db_sql = f"CREATE DATABASE IF NOT EXISTS {dest_database_name};"
     drop_dest_sql = f"DROP TABLE IF EXISTS {dest_database_name}.{dest_ice_table_name};"

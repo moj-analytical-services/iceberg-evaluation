@@ -44,7 +44,7 @@ bucket = s3.Bucket(bucket_name)
 bucket.objects.filter(Prefix=f"{database_name}/").delete()
 
 ## Drop table in Glue Data Catalog
-for t in input_tables:
+for t in input_tables+expected_data:
     try:
         glue = boto3.client("glue")
         glue.delete_table(DatabaseName=database_name, Name=t)
@@ -54,11 +54,6 @@ for t in input_tables:
 
 # %%
 directory = f"s3://{bucket_name}/{database_name}"  # "data"
-
-full_load_extraction_timestamp = datetime(2022, 1, 1)
-cdc_extraction_timestamp_1 = datetime(2022, 3, 1)
-cdc_extraction_timestamp_2 = datetime(2022, 4, 1)
-cdc_extraction_timestamp_3 = datetime(2022, 2, 1)
 future_end_datetime = datetime(2250, 1, 1)
 
 schema = StructType(
@@ -131,12 +126,12 @@ full_load_data = [
     {
         "pk": "A",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
+        "extraction_timestamp": datetime(2022, 1, 1),
     },
     {
         "pk": "B",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
+        "extraction_timestamp": datetime(2022, 1, 1),
     },
 ]
 
@@ -144,7 +139,7 @@ cdc_data_1 = [
     {
         "pk": "A",
         "ss_quantity": 3,
-        "extraction_timestamp": cdc_extraction_timestamp_1,
+        "extraction_timestamp": datetime(2022, 3, 1),
         "op": "U",
     },
 ]
@@ -153,7 +148,7 @@ cdc_data_2 = [
     {
         "pk": "C",
         "ss_quantity": 4,
-        "extraction_timestamp": cdc_extraction_timestamp_2,
+        "extraction_timestamp": datetime(2022, 4, 1),
         "op": "I",
     },
 ]
@@ -162,7 +157,7 @@ cdc_data_3 = [
     {
         "pk": "A",
         "ss_quantity": 2,
-        "extraction_timestamp": cdc_extraction_timestamp_3,
+        "extraction_timestamp": datetime(2022, 2, 1),
         "op": "U",
     },
 ]
@@ -186,16 +181,16 @@ bulk_insert_data = [
     {
         "pk": "A",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
-        "start_datetime": full_load_extraction_timestamp,
+        "extraction_timestamp": datetime(2022, 1, 1),
+        "start_datetime": datetime(2022, 1, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
     {
         "pk": "B",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
-        "start_datetime": full_load_extraction_timestamp,
+        "extraction_timestamp": datetime(2022, 1, 1),
+        "start_datetime": datetime(2022, 1, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
@@ -204,25 +199,25 @@ update_data_1 = [
     {
         "pk": "A",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
-        "start_datetime": cdc_extraction_timestamp_1,
-        "end_datetime": future_end_datetime,
+        "extraction_timestamp": datetime(2022, 1, 1),
+        "start_datetime": datetime(2022, 1, 1),
+        "end_datetime": datetime(2022, 3, 1),
         "is_current": False,
     },
     {
         "pk": "A",
         "ss_quantity": 3,
-        "extraction_timestamp": cdc_extraction_timestamp_1,
+        "extraction_timestamp": datetime(2022, 3, 1),
         "op": "U",
-        "start_datetime": cdc_extraction_timestamp_1,
+        "start_datetime": datetime(2022, 3, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
     {
         "pk": "B",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
-        "start_datetime": full_load_extraction_timestamp,
+        "extraction_timestamp": datetime(2022, 1, 1),
+        "start_datetime": datetime(2022, 1, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
@@ -231,34 +226,34 @@ update_data_2 = [
     {
         "pk": "A",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
-        "start_datetime": cdc_extraction_timestamp_1,
-        "end_datetime": future_end_datetime,
+        "extraction_timestamp": datetime(2022, 1, 1),
+        "start_datetime": datetime(2022, 1, 1),
+        "end_datetime": datetime(2022, 3, 1),
         "is_current": False,
     },
     {
         "pk": "A",
         "ss_quantity": 3,
-        "extraction_timestamp": cdc_extraction_timestamp_1,
+        "extraction_timestamp": datetime(2022, 3, 1),
         "op": "U",
-        "start_datetime": cdc_extraction_timestamp_1,
+        "start_datetime": datetime(2022, 3, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
     {
         "pk": "B",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
-        "start_datetime": full_load_extraction_timestamp,
+        "extraction_timestamp": datetime(2022, 1, 1),
+        "start_datetime": datetime(2022, 1, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
     {
         "pk": "C",
-        "ss_quantity": 1,
-        "extraction_timestamp": cdc_extraction_timestamp_2,
+        "ss_quantity": 4,
+        "extraction_timestamp": datetime(2022, 4, 1),
         "op": "I",
-        "start_datetime": cdc_extraction_timestamp_2,
+        "start_datetime": datetime(2022, 4, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
@@ -267,43 +262,43 @@ update_data_3 = [
     {
         "pk": "A",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
-        "start_datetime": cdc_extraction_timestamp_3,
-        "end_datetime": future_end_datetime,
+        "extraction_timestamp": datetime(2022, 1, 1),
+        "start_datetime": datetime(2022, 1, 1),
+        "end_datetime": datetime(2022, 2, 1),
         "is_current": False,
     },
     {
         "pk": "A",
         "ss_quantity": 2,
-        "extraction_timestamp": cdc_extraction_timestamp_3,
+        "extraction_timestamp": datetime(2022, 2, 1),
         "op": "U",
-        "start_datetime": cdc_extraction_timestamp_3,
-        "end_datetime": cdc_extraction_timestamp_2,
+        "start_datetime": datetime(2022, 2, 1),
+        "end_datetime": datetime(2022, 3, 1),
         "is_current": False,
     },
     {
         "pk": "A",
         "ss_quantity": 3,
-        "extraction_timestamp": cdc_extraction_timestamp_2,
+        "extraction_timestamp": datetime(2022, 3, 1),
         "op": "U",
-        "start_datetime": cdc_extraction_timestamp_2,
+        "start_datetime": datetime(2022, 3, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
     {
         "pk": "B",
         "ss_quantity": 1,
-        "extraction_timestamp": full_load_extraction_timestamp,
-        "start_datetime": full_load_extraction_timestamp,
+        "extraction_timestamp": datetime(2022, 1, 1),
+        "start_datetime": datetime(2022, 1, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
     {
         "pk": "C",
-        "ss_quantity": 1,
-        "extraction_timestamp": cdc_extraction_timestamp_2,
+        "ss_quantity": 4,
+        "extraction_timestamp": datetime(2022, 4, 1),
         "op": "I",
-        "start_datetime": cdc_extraction_timestamp_2,
+        "start_datetime": datetime(2022, 4, 1),
         "end_datetime": future_end_datetime,
         "is_current": True,
     },
@@ -313,7 +308,7 @@ for data, t in zip(
 ):
     # df = spark.createDataFrame(data, schema=schema_output)
     # df.repartition(1).write.parquet(f"{directory}/{t}")
-    df = spark.createDataFrame(data, schema=schema)
+    df = spark.createDataFrame(data, schema=schema_output)
     dyf = DynamicFrame.fromDF(df, glue_context, "dyf")
     sink = glue_context.getSink(
         connection_type="s3",

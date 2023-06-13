@@ -34,6 +34,28 @@ def bulk_insert(full_load_path,output_directory,future_end_datetime):
     
 
 
+# def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary_key):
+
+#     # read the new updates parquet file
+#     full_load_updates = spark.read.option('header','true').parquet(updates_filepath)
+#     # adds 3 new columns
+#     full_load_updates = full_load_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
+#     full_load_updates = full_load_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
+#     full_load_updates = full_load_updates.withColumn("is_current",F.lit(True))
+#     full_load_updates.createOrReplaceTempView(f"tmp_{table_name}_updates")
+    
+#     # SQL query to merge the new updates 
+#     query = f"""
+#     MERGE INTO {catalog_name}.{dest_database_name}.{table_name} AS f
+#     USING (SELECT * FROM tmp_{table_name}_updates) AS u
+#     ON f.{primary_key} = u.{primary_key}
+#     WHEN MATCHED THEN UPDATE SET f.end_datetime = u.extraction_timestamp, f.is_current = False
+#     """
+#     spark.sql(query)
+#     # append the new updates
+#     full_load_updates.writeTo(output_directory).append()
+    
+    
 def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary_key):
 
     # read the new updates parquet file
@@ -42,19 +64,94 @@ def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary
     full_load_updates = full_load_updates.withColumn("start_datetime",F.col("extraction_timestamp"))
     full_load_updates = full_load_updates.withColumn("end_datetime", F.to_timestamp(F.lit(future_end_datetime), 'yyyy-MM-dd'))
     full_load_updates = full_load_updates.withColumn("is_current",F.lit(True))
-    full_load_updates.createOrReplaceTempView(f"tmp_{table_name}_updates")
-    
-    # SQL query to merge the new updates 
-    query = f"""
-    MERGE INTO {catalog_name}.{dest_database_name}.{table_name} AS f
-    USING (SELECT * FROM tmp_{table_name}_updates) AS u
-    ON f.{primary_key} = u.{primary_key}
-    WHEN MATCHED THEN UPDATE SET f.end_datetime = u.extraction_timestamp, f.is_current = False
-    """
-    spark.sql(query)
-    # append the new updates
-    full_load_updates.writeTo(output_directory).append()
+    full_load_updates.createOrReplaceTempView(f"tmp_{table_name}_updates") 
+    simple_merge_sql = f"""
+    MERGE INTO {catalog_name}.{dest_database_name}.{table_name} dest
+        USING (   
+            SELECT null AS custkey_match,
+            ss_sold_date_sk,
+            ss_sold_time_sk,
+            ss_item_sk,
+            ss_customer_sk,
+            ss_cdemo_sk,
+            ss_hdemo_sk,
+            ss_addr_sk, 
+            ss_store_sk,
+            ss_promo_sk,
+            ss_ticket_number,
+            ss_quantity,
+            ss_wholesale_cost,
+            ss_list_price,
+            ss_sales_price, 
+            ss_ext_discount_amt,
+            ss_ext_sales_price,
+            ss_ext_wholesale_cost,
+            ss_ext_list_price,
+            ss_ext_tax,
+            ss_coupon_amt,
+            ss_net_paid, 
+            ss_net_paid_inc_tax,
+            ss_net_profit, 
+            extraction_timestamp, 
+            op, 
+            pk,
+            start_datetime, 
+            end_datetime, 
+            is_current
+                FROM tmp_{table_name}_updates
+        UNION ALL
+            SELECT t.pk AS custkey_match,
+            t.ss_sold_date_sk,
+            t.ss_sold_time_sk, 
+            t.ss_item_sk,
+            t.ss_customer_sk,
+            t.ss_cdemo_sk,
+            t.ss_hdemo_sk,
+            t.ss_addr_sk, 
+            t.ss_store_sk,
+            t.ss_promo_sk,
+            t.ss_ticket_number,
+            t.ss_quantity, 
+            t.ss_wholesale_cost,
+            t.ss_list_price,
+            t.ss_sales_price, 
+            t.ss_ext_discount_amt,
+            t.ss_ext_sales_price,
+            t.ss_ext_wholesale_cost, 
+            t.ss_ext_list_price,
+            t.ss_ext_tax,
+            t.ss_coupon_amt,
+            t.ss_net_paid, 
+            t.ss_net_paid_inc_tax,
+            t.ss_net_profit, 
+            t.extraction_timestamp, 
+            t.op, 
+            t.pk,
+            t.start_datetime,
+            u.start_datetime AS end_datetime, 
+            u.is_current
+            FROM {catalog_name}.{dest_database_name}.{table_name} as t
+            INNER JOIN tmp_{table_name}_updates as u ON t.pk = u.pk AND t.is_current = true
  
+        ) AS src
+        ON (dest.pk = src.pk AND dest.extraction_timestamp=src.extraction_timestamp)
+        WHEN MATCHED THEN
+            UPDATE SET end_datetime = src.end_datetime,is_current = src.is_current
+        WHEN NOT MATCHED THEN 
+            INSERT (
+                ss_sold_date_sk, ss_sold_time_sk, ss_item_sk, ss_customer_sk, ss_cdemo_sk, ss_hdemo_sk, ss_addr_sk, 
+                ss_store_sk, ss_promo_sk, ss_ticket_number, ss_quantity, ss_wholesale_cost, ss_list_price, ss_sales_price, 
+                ss_ext_discount_amt, ss_ext_sales_price, ss_ext_wholesale_cost, ss_ext_list_price, ss_ext_tax, ss_coupon_amt, 
+                ss_net_paid, ss_net_paid_inc_tax, ss_net_profit, extraction_timestamp, op, pk, start_datetime, end_datetime, is_current
+            )
+            VALUES (
+                src.ss_sold_date_sk, src.ss_sold_time_sk, src.ss_item_sk, src.ss_customer_sk, src.ss_cdemo_sk, src.ss_hdemo_sk, 
+                src.ss_addr_sk, src.ss_store_sk, src.ss_promo_sk, src.ss_ticket_number, src.ss_quantity, src.ss_wholesale_cost,
+                src.ss_list_price, src.ss_sales_price, src.ss_ext_discount_amt, src.ss_ext_sales_price, src.ss_ext_wholesale_cost, 
+                src.ss_ext_list_price, src.ss_ext_tax, src.ss_coupon_amt, src.ss_net_paid, src.ss_net_paid_inc_tax, src.ss_net_profit,src.extraction_timestamp, src.op, src.pk, src.extraction_timestamp, null, true
+            )
+            """   
+    spark.sql(simple_merge_sql).writeTo(output_directory)
     
     
 def scd2_complex(updates_filepath, output_directory, future_end_datetime, primary_key):
@@ -78,7 +175,7 @@ def scd2_complex(updates_filepath, output_directory, future_end_datetime, primar
 
     ORDER BY {primary_key}, extraction_timestamp
     """
-    spark.sql(query1)
+    
     spark.sql(query1).writeTo(output_directory).createOrReplace()
     
     #Querry to update is_select column
@@ -88,7 +185,7 @@ def scd2_complex(updates_filepath, output_directory, future_end_datetime, primar
     FROM {catalog_name}.{dest_database_name}.{table_name}
     ORDER BY {primary_key}, extraction_timestamp
     """
-    spark.sql(query2)
+    
     
     spark.sql(query2).writeTo(output_directory).createOrReplace()
     
@@ -116,7 +213,7 @@ if __name__ == "__main__":
     #                                      "scd2_type"
     #                                      ])
 
-    use_case = args.get("use_case", "bulk_insert")
+    use_case = args.get("use_case", "scd2_simple")
     bucket = args.get("bucket", "sb-test-bucket-ireland")
     output_key_base = args.get("output_key_base", "data-engineering-use-cases")
     table = args.get("table", "store_sales")
@@ -124,7 +221,7 @@ if __name__ == "__main__":
     scale = args.get("scale", 1)
     proportion = args.get("proportion", 0.001)
     str_proportion = str(proportion).replace(".", "_")
-    scd2_type = args.get("scd2_type", "complex")
+    scd2_type = args.get("scd2_type", "simple")
     
     compute = "glue_iceberg"
     # use_case = args.get("use_case","bulk_insert")
@@ -173,15 +270,6 @@ if __name__ == "__main__":
     logger.warn("output_directory")
     spark = glue_context.spark_session
     
-    #Delete if table exists
-    query = f"""
-    DROP TABLE IF EXISTS {catalog_name}.{dest_database_name}.{table_name}
-    """
-    spark.sql(query)
-    ## Delete files in S3
-    s3 = boto3.resource("s3")
-    bucket = s3.Bucket(bucket)
-    bucket.objects.filter(Prefix=folder).delete()
     
     # create the database
     query = f"""
@@ -193,7 +281,15 @@ if __name__ == "__main__":
     if use_case == "bulk_insert":
         
         # add any bulk_insert specific configs
-        
+        #Delete if table exists
+        query = f"""
+        DROP TABLE IF EXISTS {catalog_name}.{dest_database_name}.{table_name}
+        """
+        spark.sql(query)
+        ## Delete files in S3
+        s3 = boto3.resource("s3")
+        bucket = s3.Bucket(bucket)
+        bucket.objects.filter(Prefix=folder).delete()
         _ = bulk_insert(full_load_path,output_directory,future_end_datetime)
     
     if use_case == "scd2_simple":

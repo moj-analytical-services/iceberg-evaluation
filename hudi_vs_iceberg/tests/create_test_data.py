@@ -56,9 +56,9 @@ for t in input_tables:
 directory = f"s3://{bucket_name}/{database_name}"  # "data"
 
 full_load_extraction_timestamp = datetime(2022, 1, 1)
-cdc_extraction_timestamp_1 = datetime(2022, 2, 1)
+cdc_extraction_timestamp_1 = datetime(2022, 3, 1)
 cdc_extraction_timestamp_2 = datetime(2022, 4, 1)
-cdc_extraction_timestamp_3 = datetime(2022, 3, 1)
+cdc_extraction_timestamp_3 = datetime(2022, 2, 1)
 future_end_datetime = datetime(2250, 1, 1)
 
 schema = StructType(
@@ -152,7 +152,7 @@ cdc_data_1 = [
 cdc_data_2 = [
     {
         "pk": "C",
-        "ss_quantity": 1,
+        "ss_quantity": 4,
         "extraction_timestamp": cdc_extraction_timestamp_2,
         "op": "I",
     },

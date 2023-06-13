@@ -68,7 +68,7 @@ def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary
     simple_merge_sql = f"""
     MERGE INTO {catalog_name}.{dest_database_name}.{table_name} dest
         USING (   
-            SELECT null AS custkey_match,
+            SELECT
             ss_sold_date_sk,
             ss_sold_time_sk,
             ss_item_sk,
@@ -100,7 +100,7 @@ def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary
             is_current
                 FROM tmp_{table_name}_updates
         UNION ALL
-            SELECT t.pk AS custkey_match,
+            SELECT
             t.ss_sold_date_sk,
             t.ss_sold_time_sk, 
             t.ss_item_sk,
@@ -135,8 +135,8 @@ def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary
  
         ) AS src
         ON (dest.pk = src.pk AND dest.extraction_timestamp=src.extraction_timestamp)
-        WHEN MATCHED THEN
-            UPDATE SET end_datetime = src.end_datetime,is_current = src.is_current
+        WHEN MATCHED AND dest.is_current = true THEN
+            UPDATE SET end_datetime = src.end_datetime,is_current = false
         WHEN NOT MATCHED THEN 
             INSERT (
                 ss_sold_date_sk, ss_sold_time_sk, ss_item_sk, ss_customer_sk, ss_cdemo_sk, ss_hdemo_sk, ss_addr_sk, 
@@ -148,7 +148,8 @@ def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary
                 src.ss_sold_date_sk, src.ss_sold_time_sk, src.ss_item_sk, src.ss_customer_sk, src.ss_cdemo_sk, src.ss_hdemo_sk, 
                 src.ss_addr_sk, src.ss_store_sk, src.ss_promo_sk, src.ss_ticket_number, src.ss_quantity, src.ss_wholesale_cost,
                 src.ss_list_price, src.ss_sales_price, src.ss_ext_discount_amt, src.ss_ext_sales_price, src.ss_ext_wholesale_cost, 
-                src.ss_ext_list_price, src.ss_ext_tax, src.ss_coupon_amt, src.ss_net_paid, src.ss_net_paid_inc_tax, src.ss_net_profit,src.extraction_timestamp, src.op, src.pk, src.extraction_timestamp, null, true
+                src.ss_ext_list_price, src.ss_ext_tax, src.ss_coupon_amt, src.ss_net_paid, src.ss_net_paid_inc_tax, src.ss_net_profit,
+                src.extraction_timestamp, src.op, src.pk, src.extraction_timestamp, src.end_datetime, true
             )
             """   
     spark.sql(simple_merge_sql).writeTo(output_directory)

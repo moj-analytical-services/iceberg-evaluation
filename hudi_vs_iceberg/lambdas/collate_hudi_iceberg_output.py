@@ -23,6 +23,17 @@ def flatten_dict(d: dict) -> dict:
     return o
 
 
+def flatten_list(nested):
+    """recursively flatten a nested list"""
+    if not isinstance(nested, list):
+        return [nested]
+
+    result = []
+    for i in nested:
+        result.extend(flatten_list(i))
+    return result
+
+
 def format_dict(d: dict) -> dict:
     """flatten dict and remove '--' prefix from keys"""
     if d:
@@ -39,10 +50,11 @@ def collate_format_output(output: dict) -> list[dict]:
     # these are the potential steps we want to measure
     keys = ["bulk_insert_simple", "bulk_insert_complex", "simple_scd2", "scd2_complex"]
 
+    test_computes = flatten_list([pr["test_computes"] for pr in output["proportion_results"]])
+
     results = []
-    for proportion_results in output["proportion_results"]:
-        for compute in proportion_results["test_computes"]:
-            results.extend([format_dict(compute.get(k)) for k in keys])
+    for compute in test_computes:
+        results.extend([format_dict(compute.get(k)) for k in keys])
 
     results = [r for r in results if r]
     return results
@@ -67,4 +79,3 @@ def lambda_handler(event, context):
         'statusCode': 200,
         'body': results
     }
-

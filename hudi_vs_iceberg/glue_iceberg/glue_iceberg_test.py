@@ -19,6 +19,7 @@
 
 import boto3
 import datetime
+import pandas as pd
 from pyspark.sql import SparkSession, functions as F
 from pyspark.sql import SparkSession
 
@@ -53,9 +54,41 @@ spark = (
     )
     .getOrCreate()
 )
+# %%
+# Compare df functions
+def sort_df_by_column_name(df):
+    df = df.reindex(sorted(df.columns), axis=1)
+    return df
+
+
+def order_by_row_key(df):
+    ordered_df = df.sort_values(by=["pk", "extraction_timestamp"])
+    return ordered_df
+
+
+def drop_df_index(df):
+    return df.reset_index(drop=True)
+
+
+def prepare_df_for_assertion(df):
+    df = sort_df_by_column_name(df)
+    df = order_by_row_key(df)
+    df = drop_df_index(df)
+    return df
+
+
+def assert_df_equality(expected_df, actual_df):
+    expected_df = prepare_df_for_assertion(expected_df)
+    actual_df = prepare_df_for_assertion(actual_df)
+    pd.testing.assert_frame_equal(expected_df, actual_df, check_dtype=False)
 
 # %%
 # Prep for databases and files
+## Delete files in S3
+s3 = boto3.resource("s3")
+bucket = s3.Bucket(bucket_name)
+bucket.objects.filter(Prefix=f"{bucket_prefix}/{dest_database_name}.db").delete()
+
 
 ## Create a database with the name hudi_df to host hudi tables if not exists.
 try:
@@ -64,11 +97,6 @@ try:
     print(f"New database {dest_database_name} created")
 except glue.exceptions.AlreadyExistsException:
     print(f"Database {dest_database_name} already exist")
-
-## Delete files in S3
-s3 = boto3.resource("s3")
-bucket = s3.Bucket(bucket_name)
-bucket.objects.filter(Prefix=f"{bucket_name}/{bucket_prefix}/").delete()
 
 # %%
 # Show Full Load data
@@ -95,7 +123,7 @@ def bulk_insert(full_load_path, output_directory, future_end_datetime):
     full_load = full_load.withColumn(
         "end_datetime", F.to_timestamp(F.lit(future_end_datetime), "yyyy-MM-dd")
     )
-    full_load = full_load.withColumn("op", F.lit("None"))
+    full_load = full_load.withColumn("op", F.lit(None).cast("string"))
     full_load = full_load.withColumn("is_current", F.lit(True))
     full_load.writeTo(output_directory).createOrReplace()
 
@@ -103,6 +131,12 @@ def bulk_insert(full_load_path, output_directory, future_end_datetime):
 bulk_insert(f"{input_path}/full_load", output_directory, future_end_datetime)
 spark.table(output_directory).show()
 
+# %%
+# Assert results
+
+actual = pd.read_parquet(f"s3://{bucket_name}/{input_prefix}/bulk_insert")
+expected_df = spark.table(output_directory).toPandas()
+assert_df_equality(actual,expected_df)
 # %%
 # Show first cdc data (update)
 
@@ -215,6 +249,13 @@ scd2_simple(f"{input_path}/cdc_1", output_directory, future_end_datetime, "pk")
 spark.table(output_directory).sort("pk", "extraction_timestamp").show()
 
 # %%
+# Assert results
+
+actual = pd.read_parquet(f"s3://{bucket_name}/{input_prefix}/update_1")
+expected_df = spark.table(output_directory).toPandas()
+assert_df_equality(actual,expected_df)
+
+# %%
 # Show second cdc data (insert)
 
 spark.read.option("header", "true").parquet(f"{input_path}/cdc_2").show()
@@ -225,6 +266,12 @@ spark.read.option("header", "true").parquet(f"{input_path}/cdc_2").show()
 scd2_simple(f"{input_path}/cdc_2", output_directory, future_end_datetime, "pk")
 spark.table(output_directory).sort("pk", "extraction_timestamp").show()
 
+# %%
+# Assert results
+
+actual = pd.read_parquet(f"s3://{bucket_name}/{input_prefix}/update_2")
+expected_df = spark.table(output_directory).toPandas()
+assert_df_equality(actual,expected_df)
 
 # %%
 def scd2_complex(updates_filepath, output_directory, future_end_datetime, primary_key):
@@ -339,4 +386,10 @@ def scd2_complex(updates_filepath, output_directory, future_end_datetime, primar
 
 scd2_complex(f"{input_path}/cdc_3", output_directory, future_end_datetime, "pk")
 spark.table(output_directory).sort("pk", "extraction_timestamp").show()
+# %%
+# Assert results
+
+actual = pd.read_parquet(f"s3://{bucket_name}/{input_prefix}/update_3")
+expected_df = spark.table(output_directory).toPandas()
+assert_df_equality(actual,expected_df)
 # %%

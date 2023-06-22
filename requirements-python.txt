@@ -6,3 +6,4 @@ pydbtools
 jupyter
 python-dotenv
 black
+pytest

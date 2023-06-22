@@ -1,0 +1,117 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "store_sales",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "ss_sold_date_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_sold_time_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_item_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_customer_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_cdemo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_hdemo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_addr_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_store_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_promo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ss_ticket_number",
+            "type": "int64"
+        },
+        {
+            "name": "ss_quantity",
+            "type": "int32"
+        },
+        {
+            "name": "ss_wholesale_cost",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_list_price",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_sales_price",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_ext_discount_amt",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_ext_sales_price",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_ext_wholesale_cost",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_ext_list_price",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_ext_tax",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_coupon_amt",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_net_paid",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_net_paid_inc_tax",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "ss_net_profit",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "extraction_timestamp",
+            "type": "timestamp(s)"
+        },
+        {
+            "name": "op",
+            "type": "string"
+        },
+        {
+            "name": "pk",
+            "type": "string"
+        }
+    ],
+    "primary_key": [],
+    "partitions": [
+        "ss_sold_date_sk"
+    ]
+}

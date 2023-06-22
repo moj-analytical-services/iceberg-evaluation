@@ -1,0 +1,31 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "reason",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "r_reason_sk",
+            "type": "int64"
+        },
+        {
+            "name": "r_reason_id",
+            "type": "string"
+        },
+        {
+            "name": "r_reason_desc",
+            "type": "string"
+        },
+        {
+            "name": "extraction_timestamp",
+            "type": "timestamp(s)"
+        },
+        {
+            "name": "op",
+            "type": "string"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

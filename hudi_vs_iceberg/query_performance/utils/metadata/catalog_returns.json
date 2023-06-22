@@ -1,0 +1,121 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "catalog_returns",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "cr_returned_date_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_returned_time_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_item_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_refunded_customer_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_refunded_cdemo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_refunded_hdemo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_refunded_addr_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_returning_customer_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_returning_cdemo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_returning_hdemo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_returning_addr_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_call_center_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_catalog_page_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_ship_mode_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_warehouse_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_reason_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cr_order_number",
+            "type": "int64"
+        },
+        {
+            "name": "cr_return_quantity",
+            "type": "int32"
+        },
+        {
+            "name": "cr_return_amount",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "cr_return_tax",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "cr_return_amt_inc_tax",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "cr_fee",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "cr_return_ship_cost",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "cr_refunded_cash",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "cr_reversed_charge",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "cr_store_credit",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "cr_net_loss",
+            "type": "decimal128(7,2)"
+        }
+    ],
+    "primary_key": [],
+    "partitions": [
+        "cr_returned_date_sk"
+    ]
+}

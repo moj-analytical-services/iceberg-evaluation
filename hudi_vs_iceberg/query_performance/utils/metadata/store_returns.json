@@ -1,0 +1,93 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "store_returns",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "sr_returned_date_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_return_time_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_item_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_customer_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_cdemo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_hdemo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_addr_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_store_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_reason_sk",
+            "type": "int64"
+        },
+        {
+            "name": "sr_ticket_number",
+            "type": "int64"
+        },
+        {
+            "name": "sr_return_quantity",
+            "type": "int32"
+        },
+        {
+            "name": "sr_return_amt",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "sr_return_tax",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "sr_return_amt_inc_tax",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "sr_fee",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "sr_return_ship_cost",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "sr_refunded_cash",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "sr_reversed_charge",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "sr_store_credit",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "sr_net_loss",
+            "type": "decimal128(7,2)"
+        }
+    ],
+    "primary_key": [],
+    "partitions": [
+        "sr_returned_date_sk"
+    ]
+}

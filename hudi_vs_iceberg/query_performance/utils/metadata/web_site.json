@@ -1,0 +1,115 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "web_site",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "web_site_sk",
+            "type": "int64"
+        },
+        {
+            "name": "web_site_id",
+            "type": "string"
+        },
+        {
+            "name": "web_rec_start_date",
+            "type": "date64"
+        },
+        {
+            "name": "web_rec_end_date",
+            "type": "date64"
+        },
+        {
+            "name": "web_name",
+            "type": "string"
+        },
+        {
+            "name": "web_open_date_sk",
+            "type": "int64"
+        },
+        {
+            "name": "web_close_date_sk",
+            "type": "int64"
+        },
+        {
+            "name": "web_class",
+            "type": "string"
+        },
+        {
+            "name": "web_manager",
+            "type": "string"
+        },
+        {
+            "name": "web_mkt_id",
+            "type": "int32"
+        },
+        {
+            "name": "web_mkt_class",
+            "type": "string"
+        },
+        {
+            "name": "web_mkt_desc",
+            "type": "string"
+        },
+        {
+            "name": "web_market_manager",
+            "type": "string"
+        },
+        {
+            "name": "web_company_id",
+            "type": "int32"
+        },
+        {
+            "name": "web_company_name",
+            "type": "string"
+        },
+        {
+            "name": "web_street_number",
+            "type": "string"
+        },
+        {
+            "name": "web_street_name",
+            "type": "string"
+        },
+        {
+            "name": "web_street_type",
+            "type": "string"
+        },
+        {
+            "name": "web_suite_number",
+            "type": "string"
+        },
+        {
+            "name": "web_city",
+            "type": "string"
+        },
+        {
+            "name": "web_county",
+            "type": "string"
+        },
+        {
+            "name": "web_state",
+            "type": "string"
+        },
+        {
+            "name": "web_zip",
+            "type": "string"
+        },
+        {
+            "name": "web_country",
+            "type": "string"
+        },
+        {
+            "name": "web_gmt_offset",
+            "type": "decimal128(5,2)"
+        },
+        {
+            "name": "web_tax_percentage",
+            "type": "decimal128(5,2)"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

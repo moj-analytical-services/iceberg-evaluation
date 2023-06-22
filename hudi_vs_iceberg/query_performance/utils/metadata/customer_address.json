@@ -1,0 +1,63 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "customer_address",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "ca_address_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ca_address_id",
+            "type": "string"
+        },
+        {
+            "name": "ca_street_number",
+            "type": "string"
+        },
+        {
+            "name": "ca_street_name",
+            "type": "string"
+        },
+        {
+            "name": "ca_street_type",
+            "type": "string"
+        },
+        {
+            "name": "ca_suite_number",
+            "type": "string"
+        },
+        {
+            "name": "ca_city",
+            "type": "string"
+        },
+        {
+            "name": "ca_county",
+            "type": "string"
+        },
+        {
+            "name": "ca_state",
+            "type": "string"
+        },
+        {
+            "name": "ca_zip",
+            "type": "string"
+        },
+        {
+            "name": "ca_country",
+            "type": "string"
+        },
+        {
+            "name": "ca_gmt_offset",
+            "type": "decimal128(5,2)"
+        },
+        {
+            "name": "ca_location_type",
+            "type": "string"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

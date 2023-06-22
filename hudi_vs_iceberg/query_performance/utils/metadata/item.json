@@ -1,0 +1,99 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "item",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "i_item_sk",
+            "type": "int64"
+        },
+        {
+            "name": "i_item_id",
+            "type": "string"
+        },
+        {
+            "name": "i_rec_start_date",
+            "type": "date64"
+        },
+        {
+            "name": "i_rec_end_date",
+            "type": "date64"
+        },
+        {
+            "name": "i_item_desc",
+            "type": "string"
+        },
+        {
+            "name": "i_current_price",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "i_wholesale_cost",
+            "type": "decimal128(7,2)"
+        },
+        {
+            "name": "i_brand_id",
+            "type": "int32"
+        },
+        {
+            "name": "i_brand",
+            "type": "string"
+        },
+        {
+            "name": "i_class_id",
+            "type": "int32"
+        },
+        {
+            "name": "i_class",
+            "type": "string"
+        },
+        {
+            "name": "i_category_id",
+            "type": "int32"
+        },
+        {
+            "name": "i_category",
+            "type": "string"
+        },
+        {
+            "name": "i_manufact_id",
+            "type": "int32"
+        },
+        {
+            "name": "i_manufact",
+            "type": "string"
+        },
+        {
+            "name": "i_size",
+            "type": "string"
+        },
+        {
+            "name": "i_formulation",
+            "type": "string"
+        },
+        {
+            "name": "i_color",
+            "type": "string"
+        },
+        {
+            "name": "i_units",
+            "type": "string"
+        },
+        {
+            "name": "i_container",
+            "type": "string"
+        },
+        {
+            "name": "i_manager_id",
+            "type": "int32"
+        },
+        {
+            "name": "i_product_name",
+            "type": "string"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

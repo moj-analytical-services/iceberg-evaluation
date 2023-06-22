@@ -1,0 +1,31 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "household_demographics",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "hd_demo_sk",
+            "type": "int64"
+        },
+        {
+            "name": "hd_income_band_sk",
+            "type": "int64"
+        },
+        {
+            "name": "hd_buy_potential",
+            "type": "string"
+        },
+        {
+            "name": "hd_dep_count",
+            "type": "int32"
+        },
+        {
+            "name": "hd_vehicle_count",
+            "type": "int32"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

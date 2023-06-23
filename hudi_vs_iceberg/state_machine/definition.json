@@ -1,0 +1,1103 @@
+{
+    "Comment": "state machine to compare table-format frameworks",
+    "StartAt": "Choice: create full load",
+    "States": {
+      "Choice: create full load": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.create_full_load",
+            "BooleanEquals": true,
+            "Next": "generate-tpcds"
+          }
+        ],
+        "Default": "for each update size"
+      },
+      "generate-tpcds": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::glue:startJobRun.sync",
+        "Parameters": {
+          "JobName": "generate-tpcds",
+          "Arguments": {
+            "--scale.$": "States.JsonToString($.scale)",
+            "--table.$": "$.table",
+            "--bucket.$": "$.bucket",
+            "--num_workers.$": "States.JsonToString($.num_workers)",
+            "--table_format": "hive"
+          },
+          "NumberOfWorkers.$": "$.num_workers",
+          "WorkerType": "G.1X"
+        },
+        "Next": "for each update size",
+        "ResultSelector": {
+          "glue_job_name.$": "$.JobName",
+          "glue_job_id.$": "$.Id",
+          "Arguments.$": "$.Arguments"
+        },
+        "ResultPath": "$.generate_tpcds"
+      },
+      "for each update size": {
+        "Type": "Map",
+        "ItemProcessor": {
+          "ProcessorConfig": {
+            "Mode": "INLINE"
+          },
+          "StartAt": "Choice: create cdcs",
+          "States": {
+            "Choice: create cdcs": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.create_cdcs",
+                  "BooleanEquals": true,
+                  "Next": "update-tpcds"
+                }
+              ],
+              "Default": "test computes"
+            },
+            "update-tpcds": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "update-tpcds",
+                "Arguments": {
+                  "--scale.$": "States.JsonToString($.scale)",
+                  "--proportion.$": "States.JsonToString($.proportion)",
+                  "--table.$": "$.table",
+                  "--bucket.$": "$.bucket",
+                  "--table_format": "hive",
+                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                },
+                "NumberOfWorkers.$": "$.num_workers",
+                "WorkerType": "G.1X"
+              },
+              "Next": "test computes",
+              "ResultSelector": {
+                "glue_job_name.$": "$.JobName",
+                "glue_job_id.$": "$.Id",
+                "Arguments.$": "$.Arguments"
+              },
+              "ResultPath": "$.update_tpcds"
+            },
+            "test computes": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "Choice: test glue + hudi",
+                  "States": {
+                    "Choice: test glue + hudi": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Variable": "$.test_glue_hudi",
+                          "BooleanEquals": true,
+                          "Next": "Parallel: glue + hudi"
+                        }
+                      ],
+                      "Default": "Success: glue + hudi"
+                    },
+                    "Parallel: glue + hudi": {
+                      "Type": "Parallel",
+                      "Branches": [
+                        {
+                          "StartAt": "bulk insert (simple scd2): glue + hudi",
+                          "States": {
+                            "bulk insert (simple scd2): glue + hudi": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "glue_hudi",
+                                "Arguments": {
+                                  "--use_case": "bulk_insert",
+                                  "--scd2_type": "simple",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)",
+                                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                                },
+                                "NumberOfWorkers.$": "$.num_workers",
+                                "WorkerType": "G.1X"
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.bulk_insert_simple",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Errors 1"
+                                }
+                              ],
+                              "Next": "get_glue_job_cost: bulk_insert (simple scd2) - glue + hudi"
+                            },
+                            "get_glue_job_cost: bulk_insert (simple scd2) - glue + hudi": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_glue_job_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.bulk_insert_simple",
+                              "ResultSelector": {
+                                "bulk_insert_simple.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.bulk_insert_simple",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Errors 1"
+                                }
+                              ],
+                              "Next": "simple scd2: glue + hudi"
+                            },
+                            "simple scd2: glue + hudi": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "glue_hudi",
+                                "Arguments": {
+                                  "--use_case": "scd2_simple",
+                                  "--scd2_type": "simple",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)",
+                                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                                },
+                                "NumberOfWorkers.$": "$.num_workers",
+                                "WorkerType": "G.1X"
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.simple_scd2",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Errors 1"
+                                }
+                              ],
+                              "Next": "get_glue_job_cost: scd2_simple - glue + hudi"
+                            },
+                            "get_glue_job_cost: scd2_simple - glue + hudi": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_glue_job_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.simple_scd2",
+                              "ResultSelector": {
+                                "simple_scd2.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.simple_scd2",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Errors 1"
+                                }
+                              ],
+                              "End": true
+                            },
+                            "Catch Errors 1": {
+                              "Type": "Pass",
+                              "End": true
+                            }
+                          }
+                        },
+                        {
+                          "StartAt": "bulk insert (complex scd2): glue + hudi",
+                          "States": {
+                            "bulk insert (complex scd2): glue + hudi": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "glue_hudi",
+                                "Arguments": {
+                                  "--use_case": "bulk_insert",
+                                  "--scd2_type": "complex",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)",
+                                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                                },
+                                "NumberOfWorkers.$": "$.num_workers",
+                                "WorkerType": "G.1X"
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.bulk_insert_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Errors 2"
+                                }
+                              ],
+                              "Next": "get_glue_job_cost: bulk_insert (complex scd2) - glue + hudi"
+                            },
+                            "get_glue_job_cost: bulk_insert (complex scd2) - glue + hudi": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_glue_job_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.bulk_insert_complex",
+                              "ResultSelector": {
+                                "bulk_insert_complex.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.bulk_insert_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Errors 2"
+                                }
+                              ],
+                              "Next": "complex scd2: glue + hudi"
+                            },
+                            "complex scd2: glue + hudi": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "glue_hudi",
+                                "Arguments": {
+                                  "--use_case": "scd2_complex",
+                                  "--scd2_type": "complex",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)",
+                                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                                },
+                                "NumberOfWorkers.$": "$.num_workers",
+                                "WorkerType": "G.1X"
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.scd2_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Errors 2"
+                                }
+                              ],
+                              "Next": "get_glue_job_cost: scd2_complex- glue + hudi"
+                            },
+                            "get_glue_job_cost: scd2_complex- glue + hudi": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_glue_job_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.scd2_complex",
+                              "ResultSelector": {
+                                "bulk_insert_complex.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.scd2_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Errors 2"
+                                }
+                              ],
+                              "End": true
+                            },
+                            "Catch Errors 2": {
+                              "Type": "Pass",
+                              "End": true
+                            }
+                          }
+                        }
+                      ],
+                      "Next": "Success: glue + hudi"
+                    },
+                    "Success: glue + hudi": {
+                      "Type": "Succeed"
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Choice: test glue + iceberg",
+                  "States": {
+                    "Choice: test glue + iceberg": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Variable": "$.test_glue_iceberg",
+                          "BooleanEquals": true,
+                          "Next": "Parallel: glue + iceberg"
+                        }
+                      ],
+                      "Default": "Success: glue + iceberg"
+                    },
+                    "Parallel: glue + iceberg": {
+                      "Type": "Parallel",
+                      "Branches": [
+                        {
+                          "StartAt": "bulk insert (simple scd2): glue + iceberg",
+                          "States": {
+                            "bulk insert (simple scd2): glue + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "glue_iceberg",
+                                "Arguments": {
+                                  "--use_case": "bulk_insert",
+                                  "--scd2_type": "simple",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)",
+                                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                                },
+                                "NumberOfWorkers.$": "$.num_workers",
+                                "WorkerType": "G.1X"
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.bulk_insert_simple",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Error 3"
+                                }
+                              ],
+                              "Next": "get_glue_job_cost: bulk_insert (simple scd2) - glue + iceberg"
+                            },
+                            "Catch Error 3": {
+                              "Type": "Pass",
+                              "End": true
+                            },
+                            "get_glue_job_cost: bulk_insert (simple scd2) - glue + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_glue_job_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.bulk_insert_simple",
+                              "ResultSelector": {
+                                "bulk_insert_simple.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.bulk_insert_simple",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 3"
+                                }
+                              ],
+                              "Next": "simple scd2: glue + iceberg"
+                            },
+                            "simple scd2: glue + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "glue_iceberg",
+                                "Arguments": {
+                                  "--use_case": "scd2_simple",
+                                  "--scd2_type": "simple",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)",
+                                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                                },
+                                "NumberOfWorkers.$": "$.num_workers",
+                                "WorkerType": "G.1X"
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.simple_scd2",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Error 3"
+                                }
+                              ],
+                              "Next": "get_glue_job_cost: scd2_simple - glue + iceberg"
+                            },
+                            "get_glue_job_cost: scd2_simple - glue + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_glue_job_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.simple_scd2",
+                              "ResultSelector": {
+                                "simple_scd2.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.simple_scd2",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 3"
+                                }
+                              ],
+                              "End": true
+                            }
+                          }
+                        },
+                        {
+                          "StartAt": "bulk insert (complex scd2): glue + iceberg",
+                          "States": {
+                            "bulk insert (complex scd2): glue + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "glue_iceberg",
+                                "Arguments": {
+                                  "--use_case": "bulk_insert",
+                                  "--scd2_type": "complex",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)",
+                                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                                },
+                                "NumberOfWorkers.$": "$.num_workers",
+                                "WorkerType": "G.1X"
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.bulk_insert_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 4",
+                                  "ResultPath": null
+                                }
+                              ],
+                              "Next": "get_glue_job_cost: bulk_insert (complex scd2) - glue + iceberg"
+                            },
+                            "get_glue_job_cost: bulk_insert (complex scd2) - glue + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_glue_job_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.bulk_insert_complex",
+                              "ResultSelector": {
+                                "bulk_insert_complex.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.bulk_insert_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 4"
+                                }
+                              ],
+                              "Next": "complex scd2: glue + iceberg"
+                            },
+                            "complex scd2: glue + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "glue_iceberg",
+                                "Arguments": {
+                                  "--use_case": "scd2_complex",
+                                  "--scd2_type": "complex",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)",
+                                  "--num_workers.$": "States.JsonToString($.num_workers)"
+                                },
+                                "NumberOfWorkers.$": "$.num_workers",
+                                "WorkerType": "G.1X"
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.scd2_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 4",
+                                  "ResultPath": null
+                                }
+                              ],
+                              "Next": "get_glue_job_cost: scd2_complex- glue + iceberg"
+                            },
+                            "get_glue_job_cost: scd2_complex- glue + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_glue_job_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.scd2_complex",
+                              "ResultSelector": {
+                                "bulk_insert_complex.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.scd2_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 4"
+                                }
+                              ],
+                              "End": true
+                            },
+                            "Catch Error 4": {
+                              "Type": "Pass",
+                              "End": true
+                            }
+                          }
+                        }
+                      ],
+                      "Next": "Success: glue + iceberg"
+                    },
+                    "Success: glue + iceberg": {
+                      "Type": "Succeed"
+                    }
+                  }
+                },
+                {
+                  "StartAt": "Choice: test athena + iceberg",
+                  "States": {
+                    "Choice: test athena + iceberg": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Variable": "$.test_athena_iceberg",
+                          "BooleanEquals": true,
+                          "Next": "Parallel: athena + iceberg"
+                        }
+                      ],
+                      "Default": "Success"
+                    },
+                    "Parallel: athena + iceberg": {
+                      "Type": "Parallel",
+                      "Branches": [
+                        {
+                          "StartAt": "bulk insert (simple scd2): athena iceberg",
+                          "States": {
+                            "bulk insert (simple scd2): athena iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "athena_iceberg",
+                                "Arguments": {
+                                  "--use_case": "bulk_insert",
+                                  "--scd2_type": "simple",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)"
+                                }
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.bulk_insert_simple",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Error 5"
+                                }
+                              ],
+                              "Next": "get_athena_query_cost: bulk_insert (simple scd2) - athena + iceberg"
+                            },
+                            "get_athena_query_cost: bulk_insert (simple scd2) - athena + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_athena_query_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.bulk_insert_simple",
+                              "ResultSelector": {
+                                "bulk_insert_simple.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.bulk_insert_simple",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 5"
+                                }
+                              ],
+                              "Next": "simple scd2: athena + iceberg"
+                            },
+                            "simple scd2: athena + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "athena_iceberg",
+                                "Arguments": {
+                                  "--use_case": "scd2_simple",
+                                  "--scd2_type": "simple",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)"
+                                }
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.scd2_simple",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 5",
+                                  "ResultPath": null
+                                }
+                              ],
+                              "Next": "get_athena_query_cost: scd2_simple - athena + iceberg"
+                            },
+                            "get_athena_query_cost: scd2_simple - athena + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_athena_query_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.simple_scd2",
+                              "ResultSelector": {
+                                "simple_scd2.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.scd2_simple",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 5"
+                                }
+                              ],
+                              "End": true
+                            },
+                            "Catch Error 5": {
+                              "Type": "Pass",
+                              "End": true
+                            }
+                          }
+                        },
+                        {
+                          "StartAt": "bulk insert (complex scd2): athena iceberg",
+                          "States": {
+                            "bulk insert (complex scd2): athena iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "athena_iceberg",
+                                "Arguments": {
+                                  "--use_case": "bulk_insert",
+                                  "--scd2_type": "complex",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)"
+                                }
+                              },
+                              "ResultSelector": {
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.bulk_insert_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Error 6"
+                                }
+                              ],
+                              "Next": "get_athena_query_cost: bulk_insert (complex scd2) - athena + iceberg"
+                            },
+                            "get_athena_query_cost: bulk_insert (complex scd2) - athena + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_athena_query_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.bulk_insert_complex",
+                              "ResultSelector": {
+                                "bulk_insert_complex.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.bulk_insert_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 6"
+                                }
+                              ],
+                              "Next": "complex scd2: athena + iceberg"
+                            },
+                            "complex scd2: athena + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                              "Parameters": {
+                                "JobName": "athena_iceberg",
+                                "Arguments": {
+                                  "--use_case": "scd2_complex",
+                                  "--scd2_type": "complex",
+                                  "--bucket.$": "$.bucket",
+                                  "--output_key_base.$": "$.output_key_base",
+                                  "--table.$": "$.table",
+                                  "--primary_key.$": "$.primary_key",
+                                  "--scale.$": "States.JsonToString($.scale)",
+                                  "--proportion.$": "States.JsonToString($.proportion)"
+                                }
+                              },
+                              "ResultSelector": {
+                                "compute": "athena_iceberg",
+                                "use_case": "scd2_complex",
+                                "glue_job_name.$": "$.JobName",
+                                "glue_job_id.$": "$.Id",
+                                "Arguments.$": "$.Arguments"
+                              },
+                              "ResultPath": "$.scd2_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "ResultPath": null,
+                                  "Next": "Catch Error 6"
+                                }
+                              ],
+                              "Next": "get_athena_query_cost: scd2_complex- athena + iceberg"
+                            },
+                            "Catch Error 6": {
+                              "Type": "Pass",
+                              "End": true
+                            },
+                            "get_athena_query_cost: scd2_complex- athena + iceberg": {
+                              "Type": "Task",
+                              "Resource": "arn:aws:states:::lambda:invoke",
+                              "Parameters": {
+                                "Payload.$": "$",
+                                "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:get_athena_query_cost:$LATEST"
+                              },
+                              "Retry": [
+                                {
+                                  "ErrorEquals": [
+                                    "Lambda.ServiceException",
+                                    "Lambda.AWSLambdaException",
+                                    "Lambda.SdkClientException",
+                                    "Lambda.TooManyRequestsException"
+                                  ],
+                                  "IntervalSeconds": 2,
+                                  "MaxAttempts": 6,
+                                  "BackoffRate": 2
+                                }
+                              ],
+                              "ResultPath": "$.scd2_complex",
+                              "ResultSelector": {
+                                "bulk_insert_complex.$": "$.Payload.body"
+                              },
+                              "InputPath": "$.scd2_complex",
+                              "Catch": [
+                                {
+                                  "ErrorEquals": [
+                                    "States.ALL"
+                                  ],
+                                  "Next": "Catch Error 6"
+                                }
+                              ],
+                              "End": true
+                            }
+                          }
+                        }
+                      ],
+                      "Next": "Success"
+                    },
+                    "Success": {
+                      "Type": "Succeed"
+                    }
+                  }
+                }
+              ],
+              "End": true,
+              "ResultPath": "$.test_computes"
+            }
+          }
+        },
+        "ItemSelector": {
+          "proportion.$": "$$.Map.Item.Value",
+          "create_cdcs.$": "$.create_cdcs",
+          "bucket.$": "$.bucket",
+          "output_key_base.$": "$.output_key_base",
+          "table.$": "$.table",
+          "primary_key.$": "$.primary_key",
+          "scale.$": "$.scale",
+          "num_workers.$": "$.num_workers",
+          "test_glue_hudi.$": "$.test_glue_hudi",
+          "test_glue_iceberg.$": "$.test_glue_iceberg",
+          "test_athena_iceberg.$": "$.test_athena_iceberg"
+        },
+        "ItemsPath": "$.proportion",
+        "ResultPath": "$.proportion_results",
+        "Next": "collate output"
+      },
+      "collate output": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "OutputPath": "$.Payload",
+        "Parameters": {
+          "Payload.$": "$",
+          "FunctionName": "arn:aws:lambda:eu-west-1:684969100054:function:collate_hudi_iceberg_output:$LATEST"
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "Lambda.ServiceException",
+              "Lambda.AWSLambdaException",
+              "Lambda.SdkClientException",
+              "Lambda.TooManyRequestsException"
+            ],
+            "IntervalSeconds": 2,
+            "MaxAttempts": 6,
+            "BackoffRate": 2
+          }
+        ],
+        "End": true
+      }
+    }
+  }

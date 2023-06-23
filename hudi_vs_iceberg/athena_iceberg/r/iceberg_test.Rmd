@@ -1,0 +1,449 @@
+---
+title: "Updating a database with deltas using iceberg and athena"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::downcute:
+    code_folding: show
+    self_contained: true
+    thumbnails: false
+    lightbox: true
+pkgdown:
+  as_is: true
+---
+
+
+# Overview
+
+In this tutorial we are going to demonstrate how to make a database based on deltas recieved from an external source. We will build a database containing a table of all the raw deltas and then create a second database that shows us the state of the raw table delta at a particular date.
+
+We are going to pretend that we recieve a csv file that contains changes of a table. We are going to concatenate those deltas into a single table. Then generate a subsequent table based on the "raw" deltas.
+
+## Folder Set Up
+
+Here is a sample code chunk, just to show that syntax highlighting works as expected.
+
+```{r packages, echo=TRUE, eval=TRUE, results='hide' }
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(botor,Rdbtools, dplyr, purrr, knitr, rmdformats)
+
+setwd(here::here())
+source("scripts/create_dummy_deltas.R")
+con <- connect_athena()
+```
+
+
+```{r setup, include=FALSE}
+## Global options
+options(max.print = "75")
+knitr::opts_chunk$set(
+  echo = FALSE, cache = FALSE, prompt = FALSE,
+  tidy = FALSE, comment = NA,
+  message = FALSE, warning = FALSE
+)
+opts_knit$set(width = 75)
+
+```
+
+```{r folder_setup, echo=TRUE, eval=TRUE}
+# Setup your own testing area (set foldername = GH username)
+foldername <- "kraihanmoj_iceberg_test" # GH username
+foldername <- tolower(gsub("-", "_", foldername))
+
+region <- "eu-west-1"
+bucketname <- "alpha-everyone"
+db_name <- paste0("aws_example_", foldername)
+db_base_path <- paste0("s3://", bucketname, "/", foldername, "/database")
+s3_base_path <- paste0("s3://", bucketname, "/", foldername, "/")
+```
+
+```{r s3_delete, echo=TRUE, eval=TRUE, results='hide'}
+# Delete all the S3 files in a given path
+s3_objects<-s3_ls(s3_base_path)
+uris<-s3_objects$uri
+
+if (!is.null(nrow(s3_objects))) {
+  print("deleting objs")
+  lapply(uris, s3_delete)
+} else if (is.null(nrow(s3_objects))) {
+  print ("Nothing to delete")
+}
+
+```
+
+```{r db_delete, echo=TRUE, eval=TRUE, results='hide'}
+# Delete the database if it exists
+
+df_dbs <-dbGetQuery(con, "SHOW DATABASES")
+if (db_name %in% df_dbs$database_name) {
+  print(paste("deleting database", db_name))
+  dbExecute(con, paste0("DROP DATABASE IF EXISTS ", db_name ," CASCADE"))
+}
+
+rm(s3_objects,uris, df_dbs)
+
+```
+
+
+
+## Get the deltas
+
+We are going to create deltas from the `data/employees.csv` table. I am using code in a script in this repo `scripts/create_dummy_deltas.py`. It isn't important what it is doing for this tutorial but if you wanna see what it does you can.
+
+```{r dummy_delta, echo=TRUE}
+
+deltas <- read.csv("data/employees.csv")
+deltas <-get_dummy_deltas("data/employees.csv")
+
+```
+
+### Day 1
+
+D1 - The first extract of deltas from our databases
+
+```{r delta_d1, echo=TRUE}
+
+deltas["day1"]
+
+```
+
+### Day 2
+
+D2 - The next days deltas show that Lexie has their `department_id` and `manager_id` corrected. As well 2 new employees.
+
+```{r delta_d2, echo=TRUE}
+
+deltas["day2"]
+
+```
+
+### Day 3
+
+D3 - The next days deltas show that:
+
+* Dexter has left the department
+* Robert and Iris have moved departments and are working for Lexie
+* 3 New employees are also now working for Lexie
+
+```{r delta_d3, echo=TRUE}
+
+deltas["day3"]
+
+```
+
+
+## Create a database and tables
+
+There are many ways you can create a database and tables (see other tutorials). For this example we will use `RDBTools` (which infers the table schema from the data). Make sure you install any missing packages if error occurs.
+
+
+```{r db_create,echo=TRUE, eval=TRUE, results='hide'}
+
+#Create Database
+dbExecute(con, paste0("CREATE DATABASE IF NOT EXISTS ", db_name))
+
+# Add some parameters that will be useful to manage our deltas
+df <- deltas$day1
+df$date_received <- as.Date("2021-01-01")
+
+# We are going to name the folder the same as our table
+# this makes things less complex and is advised
+table_name <- "raw_deltas"
+raw_delta_path <- file.path(db_base_path, table_name)
+
+Rdbtools::dbWriteTable(con,
+                       paste0( db_name, ".", table_name),
+                       df,
+                       s3.location = raw_delta_path,
+                       file.type = "parquet"
+)
+
+```
+
+```{r raw_delta,echo=TRUE, eval=TRUE}
+
+kable(dbGetQuery(con, paste0("SELECT * FROM ", db_name, ".", table_name)))
+
+```
+
+## Take stock
+
+We now have a database that we created once and we initialised our `raw_deltas` table in our database.
+
+Now we are going to create an iceberg table using Athena. This table will show what our raw_deltas will look like at each day we do an update.
+
+> We are also going to wrap these code chunks into functions. This will help us utilise these functions later to show how you can run a delta update and then the downstream tables
+
+# Athena iceberg derived table
+
+## Create Empty Iceberg Table
+
+To start off we need to create an empty iceberg table which is registered with the AWS Glue catalog. We'll do this by sending a `CREATE TABLE` query to Athena.
+
+```{r empty_iceberg_table_function , echo=TRUE, eval=TRUE}
+
+create_empty_iceberg_table <- function(table_name) {
+  table_path <- file.path(db_base_path, table_name)
+
+  create_table_sql <- paste0("
+    CREATE TABLE ", db_name, ".employee_athena_iceberg (
+    employee_id int,
+    sex string,
+    forename string,
+    surname string,
+    department_id int,
+    manager_id int,
+    record_created date,
+    record_last_updated date)
+    LOCATION '", table_path, "/'
+    TBLPROPERTIES (
+        'table_type'='ICEBERG',
+        'format'='parquet'
+    )
+  ")
+
+  tryCatch({
+    # Execute the SQL query here
+    dbExecute(con,create_table_sql)
+  }, error = function(e) {
+    if (!grepl("Iceberg table to be created already exists", e$message)) {
+      stop(e)
+    } else {
+      message("Iceberg table to be created already exists")
+    }
+  })
+}
+
+
+```
+
+Now let's create the table.
+
+```{r create_empty_iceberg_table, echo=TRUE, eval=TRUE}
+
+iceberg_table_name <- "employee_athena_iceberg"
+create_empty_iceberg_table("employee_athena_iceberg")
+```
+
+Let's query our empty table to see that it's been created correctly.
+
+```{r empty_iceberg_table, echo=TRUE, eval=TRUE}
+
+kable(dbGetQuery(con, paste0("SELECT * FROM ", db_name, ".", iceberg_table_name)) )
+```
+
+We're now going to create a function which will use our `raw_deltas` table to:
+
+* Insert new records
+* Delete records which are marked as deleted in the `record_deleted` column
+* Update the `manager_id` and `department_id` fields if either of these have changed n\
+
+We'll do all of this with the `MERGE INTO SQL` command for iceberg tables in Athena.
+
+## Athena Iceberg Report
+
+```{r create_report_athena_iceberg_function, echo=TRUE, eval=TRUE}
+create_report_athena_iceberg <- function(date_report, tbl_name) {
+  full_sql <- paste0("
+    MERGE INTO ", db_name, ".", tbl_name, " t USING (
+        SELECT
+            employee_id,
+            sex,
+            forename,
+            surname,
+            department_id,
+            manager_id,
+            date '", date_report, "' AS record_last_updated,
+            record_deleted
+        FROM
+        (
+            SELECT *,
+            row_number() OVER (PARTITION BY employee_id ORDER BY date_received DESC) as rn
+            FROM ", db_name, ".raw_deltas
+            WHERE date_received <= date '", date_report, "'
+        )
+        WHERE rn = 1
+    ) s ON (t.employee_id = s.employee_id)
+        WHEN MATCHED AND s.record_deleted
+            THEN DELETE
+        WHEN MATCHED AND NOT s.record_deleted AND (t.department_id != s.department_id OR t.manager_id != s.manager_id)
+            THEN UPDATE
+                SET department_id = s.department_id, manager_id = s.manager_id, record_last_updated = s.record_last_updated
+        WHEN NOT MATCHED
+            THEN INSERT
+                (employee_id, sex, forename, surname, department_id, manager_id, record_created, record_last_updated)
+                    VALUES (s.employee_id, s.sex, s.forename, s.surname, s.department_id, s.manager_id, s.record_last_updated, s.record_last_updated)
+  ")
+
+  # Run the query
+  dbExecute(con,full_sql)
+}
+
+
+```
+
+Run code to create report for `2021-01-01` data
+
+```{r create_report_athena_iceberg,echo=TRUE, eval=TRUE, results='hide'}
+report_date<-as.Date("2021-01-01")
+create_report_athena_iceberg(report_date, iceberg_table_name)
+```
+
+```{r report_athena_iceberg,echo=TRUE, eval=TRUE}
+
+result <- dbGetQuery(con, paste0("SELECT * FROM ", db_name, ".", iceberg_table_name))
+result <- result[order(result$employee_id), ]
+
+kable(result)
+
+```
+
+
+## Final bit
+
+Now we have 2 tables.
+
+* `raw_deltas` a table of all the raw data concatenated
+* `employee_athena_iceberg` a report based on what employees table looked like at the given point in time. (Remember in this example the raw_deltas are from an external table employees where we get given daily deltas of changes).
+
+Now we want to update each of these tables based on the data from day2 then do it again for day3s data. Lets do that now (starting with day 2)
+
+### Day 2
+
+```{r iceberg_day2,echo=TRUE, eval=TRUE , results='hide' }
+df2 <- deltas$day2
+df2$date_received <- as.Date("2021-01-02")
+df2[] <- mapply(FUN = as,df2,sapply(df,class),SIMPLIFY = FALSE) #ensure they are all the same class to avoid schema errors
+
+Rdbtools::dbWriteTable(con,
+                       paste0(db_name, ".", table_name),
+                       df2,
+                       s3.location = raw_delta_path,
+                       file.type = "parquet",
+                       append = TRUE
+)
+
+report_date<-as.Date("2021-01-02")
+create_report_athena_iceberg(report_date, iceberg_table_name) # note we use insert to now
+
+
+```
+
+```{r iceberg_day2_table,echo=TRUE, eval=TRUE}
+
+kable(dbGetQuery(con, paste0("SELECT * FROM ", db_name, ".", iceberg_table_name)))
+```
+
+
+As we can see new employees have been added and Lexie's department and manager records have been updated as expected.
+
+It is also worth noting that previous reports have been untouched (using the kable table as an example)
+
+### Day 3
+
+Let's run the same again for day 3. The code is exactly the same as it was for day2 but now with a new date
+
+```{r iceberg_day3 ,echo=TRUE, eval=TRUE , results='hide' }
+
+df3 <- deltas$day3
+df3$date_received <- as.Date("2021-01-03")
+df3[] <- mapply(FUN = as,df3,sapply(df,class),SIMPLIFY = FALSE)
+
+Rdbtools::dbWriteTable(con,
+                       paste0(db_name, ".", table_name),
+                       df3,
+                       s3.location = raw_delta_path,
+                       file.type = "parquet",
+                       append = TRUE
+)
+
+report_date<-as.Date("2021-01-03")
+create_report_athena_iceberg(report_date, iceberg_table_name) # note we use insert to now
+
+```
+
+
+```{r iceberg_day3_table,echo=TRUE, eval=TRUE}
+
+kable(dbGetQuery(con, paste0("SELECT * FROM ", db_name, ".", iceberg_table_name)))
+```
+
+
+
+From the above we can see that Dexter has been removed from the report (as he left) and new staff have been added. Again as expected when looking at our original deltas.
+
+# Performing Time Travel
+
+## Table's history
+
+As we're using iceberg we can perform time travel on our table to view the state of the table at a given point of time. To get a list of when the table was updated so we now when to travel to, we can query the iceberg table's history as follows:
+
+
+```{r history,echo=TRUE, eval=TRUE}
+history <- dbGetQuery(con,paste0("SELECT * FROM ", '"',db_name, '"','.', '"',iceberg_table_name,'$history','"'))
+
+kable(history)
+
+```
+
+Let's grab a time between our latest and penultimate change and query it.
+
+```{r timestamp,echo=TRUE, eval=TRUE}
+
+timestamp <- as.POSIXct(history$made_current_at[1], origin = "1970-01-01") + 1
+timestamp <- format(timestamp, "%Y-%m-%d %H:%M:%S")
+
+result <- dbGetQuery(con,paste0("SELECT * FROM ", db_name, ".", iceberg_table_name, " FOR TIMESTAMP AS OF TIMESTAMP '", timestamp, " UTC'"))
+kable(result)
+
+```
+
+We can also optimise how our iceberg table is stored by running an `OPTIMIZE` command
+
+```{r optimise,echo=TRUE, eval=TRUE, results='hide'}
+
+
+dbExecute(con,paste0("OPTIMIZE ", db_name, ".", iceberg_table_name, " REWRITE DATA USING BIN_PACK"))
+
+```
+
+Note that this does create a new version of our table (see below)
+
+```{r final_history,echo=TRUE, eval=TRUE}
+
+
+history <- dbGetQuery(con,paste0("SELECT * FROM ", '"',db_name, '"','.', '"',iceberg_table_name,'$history','"'))
+kable(history)
+
+```
+
+# Wrapping Up
+
+So hopefully that is useful. Let's destroy what we created.
+
+```{r wrap_up, echo=TRUE, eval=TRUE, results='hide'}
+
+# Delete all the S3 files in a given path
+s3_objects<-s3_ls(s3_base_path)
+uris<-s3_objects$uri
+
+if (!is.null(nrow(s3_objects))) {
+  print("deleting objs")
+  lapply(uris, s3_delete)
+} else if (is.null(nrow(s3_objects))) {
+  print ("Nothing to delete")
+}
+
+# Delete the database if it exists
+
+df_dbs <-dbGetQuery(con, "SHOW DATABASES")
+if (db_name %in% df_dbs$database_name) {
+  print(paste("deleting database", db_name))
+  dbExecute(con, paste0("DROP DATABASE IF EXISTS ", db_name ," CASCADE"))
+}
+
+rm(s3_objects,uris, df_dbs)
+
+dbDisconnect(con) # disconnects the connection
+
+```

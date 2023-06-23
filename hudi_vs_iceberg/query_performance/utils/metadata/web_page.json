@@ -1,0 +1,67 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "web_page",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "wp_web_page_sk",
+            "type": "int64"
+        },
+        {
+            "name": "wp_web_page_id",
+            "type": "string"
+        },
+        {
+            "name": "wp_rec_start_date",
+            "type": "date64"
+        },
+        {
+            "name": "wp_rec_end_date",
+            "type": "date64"
+        },
+        {
+            "name": "wp_creation_date_sk",
+            "type": "int64"
+        },
+        {
+            "name": "wp_access_date_sk",
+            "type": "int64"
+        },
+        {
+            "name": "wp_autogen_flag",
+            "type": "string"
+        },
+        {
+            "name": "wp_customer_sk",
+            "type": "int64"
+        },
+        {
+            "name": "wp_url",
+            "type": "string"
+        },
+        {
+            "name": "wp_type",
+            "type": "string"
+        },
+        {
+            "name": "wp_char_count",
+            "type": "int32"
+        },
+        {
+            "name": "wp_link_count",
+            "type": "int32"
+        },
+        {
+            "name": "wp_image_count",
+            "type": "int32"
+        },
+        {
+            "name": "wp_max_ad_count",
+            "type": "int32"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

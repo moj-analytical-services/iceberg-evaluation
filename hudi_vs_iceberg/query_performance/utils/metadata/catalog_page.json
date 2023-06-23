@@ -1,0 +1,47 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "catalog_page",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "cp_catalog_page_sk",
+            "type": "int64"
+        },
+        {
+            "name": "cp_catalog_page_id",
+            "type": "string"
+        },
+        {
+            "name": "cp_start_date_sk",
+            "type": "int32"
+        },
+        {
+            "name": "cp_end_date_sk",
+            "type": "int32"
+        },
+        {
+            "name": "cp_department",
+            "type": "string"
+        },
+        {
+            "name": "cp_catalog_number",
+            "type": "int32"
+        },
+        {
+            "name": "cp_catalog_page_number",
+            "type": "int32"
+        },
+        {
+            "name": "cp_description",
+            "type": "string"
+        },
+        {
+            "name": "cp_type",
+            "type": "string"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

@@ -1,0 +1,75 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "warehouse",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "w_warehouse_sk",
+            "type": "int64"
+        },
+        {
+            "name": "w_warehouse_id",
+            "type": "string"
+        },
+        {
+            "name": "w_warehouse_name",
+            "type": "string"
+        },
+        {
+            "name": "w_warehouse_sq_ft",
+            "type": "int32"
+        },
+        {
+            "name": "w_street_number",
+            "type": "string"
+        },
+        {
+            "name": "w_street_name",
+            "type": "string"
+        },
+        {
+            "name": "w_street_type",
+            "type": "string"
+        },
+        {
+            "name": "w_suite_number",
+            "type": "string"
+        },
+        {
+            "name": "w_city",
+            "type": "string"
+        },
+        {
+            "name": "w_county",
+            "type": "string"
+        },
+        {
+            "name": "w_state",
+            "type": "string"
+        },
+        {
+            "name": "w_zip",
+            "type": "string"
+        },
+        {
+            "name": "w_country",
+            "type": "string"
+        },
+        {
+            "name": "w_gmt_offset",
+            "type": "decimal128(5,2)"
+        },
+        {
+            "name": "extraction_timestamp",
+            "type": "timestamp(s)"
+        },
+        {
+            "name": "op",
+            "type": "string"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

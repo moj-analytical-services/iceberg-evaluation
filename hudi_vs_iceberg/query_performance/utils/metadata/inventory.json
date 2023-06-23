@@ -1,0 +1,29 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "inventory",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "inv_date_sk",
+            "type": "int64"
+        },
+        {
+            "name": "inv_item_sk",
+            "type": "int64"
+        },
+        {
+            "name": "inv_warehouse_sk",
+            "type": "int64"
+        },
+        {
+            "name": "inv_quantity_on_hand",
+            "type": "int32"
+        }
+    ],
+    "primary_key": [],
+    "partitions": [
+        "inv_date_sk"
+    ]
+}

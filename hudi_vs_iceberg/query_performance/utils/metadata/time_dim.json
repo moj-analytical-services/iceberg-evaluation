@@ -1,0 +1,59 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "time_dim",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "t_time_sk",
+            "type": "int64"
+        },
+        {
+            "name": "t_time_id",
+            "type": "string"
+        },
+        {
+            "name": "t_time",
+            "type": "int32"
+        },
+        {
+            "name": "t_hour",
+            "type": "int32"
+        },
+        {
+            "name": "t_minute",
+            "type": "int32"
+        },
+        {
+            "name": "t_second",
+            "type": "int32"
+        },
+        {
+            "name": "t_am_pm",
+            "type": "string"
+        },
+        {
+            "name": "t_shift",
+            "type": "string"
+        },
+        {
+            "name": "t_sub_shift",
+            "type": "string"
+        },
+        {
+            "name": "t_meal_time",
+            "type": "string"
+        },
+        {
+            "name": "extraction_timestamp",
+            "type": "timestamp(s)"
+        },
+        {
+            "name": "op",
+            "type": "string"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

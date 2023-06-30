@@ -317,15 +317,6 @@ if __name__ == "__main__":
     
     
     conf = SparkConf()
-        # # Adaptive Query Execution (AQE) configurations
-    #conf.set("spark.sql.adaptive.enabled","true")
-        # "spark.sql.adaptive.coalescePartitions.enabled",
-        # "spark.sql.adaptive.coalescePartitions.minPartitionNum",
-        # "spark.sql.adaptive.coalescePartitions.initialPartitionNum",
-        # "spark.sql.adaptive.skewJoin.enabled",
-        # "spark.sql.adaptive.skewJoin.skewedPartitionFactor",
-        # "spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes",
-    #conf.set("spark.sql.adaptive.localShuffleReader.enabled","true")
     conf.set("spark.shuffle.storage.path","s3://sb-test-bucket-ireland/shuffle-data/")
     conf.set("spark.default.parallelism", parallelism)
     conf.set("spark.sql.shuffle.partitions", parallelism)

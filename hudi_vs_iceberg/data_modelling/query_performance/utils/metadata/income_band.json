@@ -1,0 +1,23 @@
+{
+    "$schema": "https://moj-analytical-services.github.io/metadata_schema/mojap_metadata/v1.3.0.json",
+    "name": "income_band",
+    "description": "",
+    "file_format": "parquet",
+    "sensitive": false,
+    "columns": [
+        {
+            "name": "ib_income_band_sk",
+            "type": "int64"
+        },
+        {
+            "name": "ib_lower_bound",
+            "type": "int32"
+        },
+        {
+            "name": "ib_upper_bound",
+            "type": "int32"
+        }
+    ],
+    "primary_key": [],
+    "partitions": []
+}

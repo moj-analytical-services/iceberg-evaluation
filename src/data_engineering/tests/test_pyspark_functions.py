@@ -6,14 +6,14 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkConf
+from glue_jobs.pyspark_functions import * 
 from tests.compare_df import assert_df_equality
 
 bucket_name = "sb-test-bucket-ireland"
 key = "tpcds_test"
 directory = f"s3://{bucket_name}/{key}"
-compute = "glue_hudi"
+compute = "glue_iceberg"
 database_name = "tpcds_test"
-catalog_name = "glue_catalog"
 
 @pytest.fixture(scope="module", autouse=True)
 def glue_context():
@@ -22,11 +22,8 @@ def glue_context():
 
     args = getResolvedOptions(sys.argv, ['JOB_NAME'])
     conf = SparkConf()
-    conf.set("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-    conf.set(f"spark.sql.catalog.{catalog_name}.warehouse", f"{database_name}") 
-    conf.set(f"spark.sql.catalog.{catalog_name}.catalog-impl", "org.apache.iceberg.aws.glue.GlueCatalog") 
-    conf.set(f"spark.sql.catalog.{catalog_name}.io-impl", "org.apache.iceberg.aws.s3.S3FileIO") 
-    conf.set(f"spark.sql.catalog.{catalog_name}", "org.apache.iceberg.spark.SparkCatalog") 
+    conf.set("spark.serializer","org.apache.spark.serializer.KryoSerializer")
+    conf.set("spark.sql.hive.convertMetastoreParquet","false")
     context = GlueContext(SparkContext.getOrCreate(conf=conf))
     job = Job(context)
     job.init(args['JOB_NAME'], args)
@@ -37,12 +34,7 @@ def glue_context():
 
 
 def test_bulk_insert(glue_context):
-    spark_df = glue_context.create_data_frame.from_catalog(
-        database=database_name,
-        table_name="bulk_insert",
-        additional_options={"useCatalogSchema": True},
-    )
-    actual_df = spark_df.toPandas()
+    actual_df = pd.read_parquet(f"{directory}/bulk_insert")
     expected_df = pd.read_parquet(f"{directory}/bulk_insert")
     assert_df_equality(expected_df,actual_df)
     

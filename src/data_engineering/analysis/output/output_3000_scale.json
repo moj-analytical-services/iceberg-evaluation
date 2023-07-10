@@ -1,0 +1,346 @@
+{
+  "ExecutedVersion": "$LATEST",
+  "Payload": {
+    "statusCode": 200,
+    "body": [
+      {
+        "num_workers": "100",
+        "execution_time": 560,
+        "dpu_seconds": 45590,
+        "cost": 5.572111111111112,
+        "glue_job_name": "glue_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.001",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_25699e53619ed9307f5241715734d03dbec060c3a31e1f8e6e9bf967a99d6234"
+      },
+      {
+        "num_workers": "100",
+        "execution_time": 606,
+        "dpu_seconds": 45170,
+        "cost": 5.520777777777778,
+        "glue_job_name": "glue_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.001",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_ab61d5e3ce8df6cce610216e3a799c5d06f2887b992ffa3f9e1c81678b1f6926"
+      },
+      {
+        "execution_time": 1030.604,
+        "tb_scanned": 0.42958048949367367,
+        "cost": 2.1479024474683683,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.001",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_78bd4e4c3ef197e0282b266d1786c2c683458ecc4128e71e0974c2f331634e4a"
+      },
+      {
+        "execution_time": 411.125,
+        "tb_scanned": 0.6505529999030841,
+        "cost": 3.2527649995154206,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "scd2_simple",
+        "proportion": "0.001",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_c55833ab903f47e48785c41483dc481820fc760f30875eafb2b55929a1918e00"
+      },
+      {
+        "execution_time": 1037.458,
+        "tb_scanned": 0.42958048949367367,
+        "cost": 2.1479024474683683,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.001",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_8fc6a3dee581291dd692d738ce06185baf9d48f6027f9c50e8037622c9e7dabb"
+      },
+      {
+        "execution_time": 423.17,
+        "tb_scanned": 0.6504721455266917,
+        "cost": 3.2523607276334587,
+        "compute": "athena_iceberg",
+        "use_case": "scd2_complex",
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "proportion": "0.001",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_78cba86fef44ecaf2b3c862cac02109ae06a1f989f251d98014fe12b73d3fb83"
+      },
+      {
+        "num_workers": "100",
+        "execution_time": 588,
+        "dpu_seconds": 45914,
+        "cost": 5.611711111111111,
+        "glue_job_name": "glue_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.01",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_45d5b07599999a7cfee289e01e874fff78d80c1cbbfe5384bc13ff0d8780e78f"
+      },
+      {
+        "num_workers": "100",
+        "execution_time": 545,
+        "dpu_seconds": 45275,
+        "cost": 5.533611111111111,
+        "glue_job_name": "glue_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.01",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_9620fd54b06cca6c61bca8a319ffd693d6147e45ae298e4e61e24aef9d39d518"
+      },
+      {
+        "execution_time": 984.657,
+        "tb_scanned": 0.42958048949367367,
+        "cost": 2.1479024474683683,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.01",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_1424be39f8064e592819cffa15a07047eb29339f5c154d79ad546af7bbf2ab59"
+      },
+      {
+        "execution_time": 967.174,
+        "tb_scanned": 0.42958048949367367,
+        "cost": 2.1479024474683683,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.01",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_58ee5e4c1bbcd78061b7252a3d76c70d3394b806e23d56a9148f2c6db18f9a82"
+      },
+      {
+        "execution_time": 1175.834,
+        "tb_scanned": 0.6573161612686818,
+        "cost": 3.2865808063434088,
+        "compute": "athena_iceberg",
+        "use_case": "scd2_complex",
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "proportion": "0.01",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_6e0a7a77634b549049edbc8d74ab99cb167f53960f1deb208b3d5ee1775884cc"
+      },
+      {
+        "num_workers": "100",
+        "execution_time": 583,
+        "dpu_seconds": 44871,
+        "cost": 5.484233333333334,
+        "glue_job_name": "glue_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.1",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_31589705dfebd8a816992990484b30ea86f9b522fb48cee9fad1339e95e32b1b"
+      },
+      {
+        "num_workers": "100",
+        "execution_time": 562,
+        "dpu_seconds": 45119,
+        "cost": 5.514544444444445,
+        "glue_job_name": "glue_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.1",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_49fd6dede1745f08a446df8085b0459f0370bf4910538261cfd12d93bc471c80"
+      },
+      {
+        "execution_time": 997.269,
+        "tb_scanned": 0.42958048949367367,
+        "cost": 2.1479024474683683,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.1",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_c5320d8570997c88add3fe94ea57b06bb6a8d6e4b2d2fbc895e8245c21ec7bbd"
+      },
+      {
+        "execution_time": 999.773,
+        "tb_scanned": 0.42958048949367367,
+        "cost": 2.1479024474683683,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.1",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_d23ae5504e8614049551da6778e979e5da7ecf8d8f910e06899739ea7006754c"
+      },
+      {
+        "num_workers": "100",
+        "execution_time": 516,
+        "dpu_seconds": 51600,
+        "cost": 6.306666666666667,
+        "glue_job_name": "glue_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.99",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_653f59d30fbe172af3d066425e8509eeae08dd26c6aadbf517d015c256d9f93f"
+      },
+      {
+        "num_workers": "100",
+        "execution_time": 518,
+        "dpu_seconds": 51800,
+        "cost": 6.331111111111111,
+        "glue_job_name": "glue_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.99",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_938fa2f0adc8d208131071e94b40a663c7c0583e3e1035909f99310b6c4b6d23"
+      },
+      {
+        "execution_time": 955.17,
+        "tb_scanned": 0.42958048949367367,
+        "cost": 2.1479024474683683,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.99",
+        "primary_key": "pk",
+        "scd2_type": "simple",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_c8485ab8826f897516b8a58b9887171a8005960a1b551dcd842431cbfe719897"
+      },
+      {
+        "execution_time": 969.331,
+        "tb_scanned": 0.42958048949367367,
+        "cost": 2.1479024474683683,
+        "glue_job_name": "athena_iceberg",
+        "output_key_base": "data-engineering-use-cases",
+        "use_case": "bulk_insert",
+        "proportion": "0.99",
+        "primary_key": "pk",
+        "scd2_type": "complex",
+        "table": "store_sales",
+        "bucket": "sb-test-bucket-ireland",
+        "scale": "3000",
+        "glue_job_id": "jr_30d12336984e09765fdb1b2af65e579762c66487e7aa6d3ed8f5411fa391419e"
+      }
+    ]
+  },
+  "SdkHttpMetadata": {
+    "AllHttpHeaders": {
+      "X-Amz-Executed-Version": [
+        "$LATEST"
+      ],
+      "x-amzn-Remapped-Content-Length": [
+        "0"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "x-amzn-RequestId": [
+        "1a16a39a-8415-439b-8bcd-cbf24f48e368"
+      ],
+      "Content-Length": [
+        "8335"
+      ],
+      "Date": [
+        "Wed, 14 Jun 2023 19:27:05 GMT"
+      ],
+      "X-Amzn-Trace-Id": [
+        "root=1-648a1486-1e58b4b3372555a5556c995e;sampled=0;lineage=b0bde637:0"
+      ],
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "HttpHeaders": {
+      "Connection": "keep-alive",
+      "Content-Length": "8335",
+      "Content-Type": "application/json",
+      "Date": "Wed, 14 Jun 2023 19:27:05 GMT",
+      "X-Amz-Executed-Version": "$LATEST",
+      "x-amzn-Remapped-Content-Length": "0",
+      "x-amzn-RequestId": "1a16a39a-8415-439b-8bcd-cbf24f48e368",
+      "X-Amzn-Trace-Id": "root=1-648a1486-1e58b4b3372555a5556c995e;sampled=0;lineage=b0bde637:0"
+    },
+    "HttpStatusCode": 200
+  },
+  "SdkResponseMetadata": {
+    "RequestId": "1a16a39a-8415-439b-8bcd-cbf24f48e368"
+  },
+  "StatusCode": 200
+}

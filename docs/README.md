@@ -1,101 +1,165 @@
-# Hudi vs Iceberg
+---
+marp: true
+theme: uncover
+paginate: true
+_paginate: skip
+---
+# Evaluation
 
-## Context
+![bg left:40% 80%](https://upload.wikimedia.org/wikipedia/commons/9/95/Apache_Iceberg_Logo.svg)
 
-[Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-data-engineering/) pulls full loads and on-going data changes from various MOJ legacy/heritage databases to the [Analytical Platform](https://user-guidance.services.alpha.mojanalytics.xyz/), MoJ's data analysis environment, providing modern tools and key datasets for MoJ analysts.
+---
+## Overview
 
-Managed Pipelines uses an AWS Glue PySpark job to curate the data through a daily batch process:
+1. Why did we decide to investigate [Apache Iceberg](https://iceberg.apache.org/)?
+2. How did we evaluate [Apache Iceberg](https://iceberg.apache.org/) for our use cases?
+4. Conclusion, risks and roadmap
 
-- CDC changes - Implement a [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to retain the full history of data. When a row is updated or deleted on the source database, the current record on the AP is "closed" and a new record is inserted with the changed data values.
-- Full load changes - Impute records which where deleted since the last full or CDC load to ensure deletions are accurately recorded
+---
 
-The performance of the AWS Glue PySpark job has been degrading over the last few months, with monthly costs tripling. In addition, issues including large-volumes of missing-data and unexpected duplicates being introduced have occured, but given the complexity of the current job the root-cause could not be identified. We would like to improve the Managed Pipeline curation step to make use of recent advancements, reducing the complexity and creating a more efficient and maintainable solution.
+# Why did we investigate [Apache Iceberg](https://iceberg.apache.org/)?
 
-The Apache Hudi and Iceberg frameworks for data lakes can simplify and enhance incremental data processing (Note that Delta Lake by Databricks is also available but more compatible with the Databricks environment and hence disreguarded). AWS has also recently released [Athena version 3.0](https://aws.amazon.com/about-aws/whats-new/2022/10/amazon-athena-announces-upgraded-query-engine/) with performance improvements with additional [iceberg-related features](https://www.matano.dev/blog/2023/02/14/athena-v3-deep-dive). We may no longer need all the processing power of Spark, because we no longer need to read all the data to memory before being able to update.
+---
+## Existing Data Pipeline
 
-This repository investigates the performance improvements and limitations of using different combinations of glue/athena with hudi/iceberg. Many articles already compare Hudi and Iceberg e.g. https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison. However we wanted to compare according to use cases relevant to the MoJ Analytical Platform, and the impact on downstream Data Modelling and Data Analysis capabilities.
+1. [AWS DMS](https://aws.amazon.com/dms/) to extract full loads and changed data
+2. [AWS Glue PySpark](https://docs.aws.amazon.com/glue/latest/dg/spark_and_pyspark.html) to create curated tables 
+3. [Amazon Athena](https://www.amazonaws.cn/en/athena/) + [DBT](https://www.getdbt.com/) to create derived tables
+4. Data stored in [S3](https://aws.amazon.com/s3/) and metadata in [Glue Data Catalog](https://towardsaws.com/data-cataloging-in-aws-glue-c649fa5be715)
 
-### Current file size
-Some analysis was carried out to get an idea of the curent volume of data that we are processing. Total (full load and cdc) file count and file size was collected for the raw history folders of both databases.
+![architecture center](architecture_existing.drawio.png)
+See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-data-engineering/) for more details
 
-![file_size](MPM_raw_hist_top20.png)
+---
+## Data Curation processes
 
-## Use Cases
+1. Bulk insert full loads
+2. Impute any deleted rows prior to additional full loads
+3. Remove duplicate data
+3. Apply [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to track how a row changes over time: 
 
-The tables below summarise the different uses cases and combinations of technologies they were compared against. For more details, please refer to the individual links. The use cases have been split up by data function to help organise the findings, however there is some overlap between them.
+| id | status | updated_at | valid_from | valid_to |
+| -- | ------ | ---------- | ---------- | ------------ |
+| 1 | pending | 2019-01-01 | 2019-01-01 | 2019-01-02 |
+| 1 | shipped | 2019-01-02 | 2019-01-02 | `null` |
 
-![architecture](architecture.drawio.png)
+---
+## Issues with [Glue PySpark job](https://github.com/ministryofjustice/analytical-platform-data-engineering/blob/main/glue_database/glue_jobs/create_derived_table.py)
 
-### Data Engineering
+1. Performance has degraded over the last few months, with monthly costs quadrupling
+2. Very complex process for handling [data shuffling](https://medium.com/distributed-computing-with-ray/executing-a-distributed-shuffle-without-a-mapreduce-system-d5856379426c) which makes it hard to maintain/debug 
+3. Large volumes of intermittent missing data and duplicates, but given the complexity of the current job, the root-cause could not be identified
+4. Lack of specialist Spark expertise in the team
 
-Data Engineering use cases focus on versioning, deduping and uploading the data to the Analytical Platform.
+---
+## Data Lake Table Formats
 
-It's not possible to write to a Hudi table with Athena, hence its exclusion from the options below.
+- [Table formats](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/) abstract groups of data files as a single "table" so we can treat data lakes like databases
+- [Apache Hive](https://hive.apache.org/), the original table format, defines a table as all the files in one or more particular directories
+- [Modern table format](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/) ([Apache Hudi](https://hudi.apache.org/), Databrick's [Delta Lake](https://delta.io/), and Apache Iceberg) store additional metadata 
+- Allows query engines to identify relevant data files -> minimise data scans and speed up queries
 
-|Use Case|Glue+Hudi|Glue+Iceberg|Athena+Iceberg|Glue+Hive?|
-|-|:-:|:-:|:-:|:-:|
-|Bulk Insert|:warning: <br />Slow|:white_check_mark: <br />Completed twice faster|:warning: <br />Slow||
-|SCD2||||
-|Impute deletions||||
-|Deduplication||||
-|Schema evolution (on Write)||||
+---
+## Why Apache Iceberg?
 
-The following use cases are out of scope:
+1. Performance is very dependent on [optimisation](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-transparent-tpc-ds-lakehouse-performance-benchmarks)
+2. [Ecosystem support](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison):
 
-- Streaming _ The Analytical Platform does not use streaming data as yet which makes it difficult to come up with a use case
-- Concurrency _ This is only important when there are frequent updates to the data, which is not currently the case with the Analytical Platform
-- Partition evolution _ The curated data is partioned by curation date, if at all
+|Ecosystem|Hudi|Delta Lake|Iceberg|
+|-|-|-|-|
+|AWS Glue|Read+Write|Read+Write|Read+Write|
+|[Trino](https://trino.io/)|Read|Read|Read+Write|
+|Athena|Read|Read|Read+Write|
 
-### Data Modelling and Analysis
+*Only Iceberg has write-support for Amazon Athena*
 
-Data Modelling and Analysis uses cases focus on querying and transforming the data.
+---
+## Questions to Answer
 
-Whilst it is possible to use glue to transform data, it is overly complicated for the use cases below. Hence we only consider Athena.
+1. Can we leverage Apache Iceberg to improve performance and decrease costs?
+2. Can we replace Glue PySpark with Amazon Athena to decrease costs and simplify tech stack?
+3. What is the impact  on Data Derivation processes?
 
-|Use Case|Athena+Hudi|Athena+Iceberg|Athena+Hive|
-|-|:-:|:-:|:-:|
-|Select|:x: <br />Not Possible|:white_check_mark: <br />Possible||
-|Aggregation||||
-|Join||||
-|Schema evolution (on Read)||||
-|Partition evolution||||
-|Select during SCD2||||
-|Timestamps||||
-|DML||||
-|Compatibility with existing tools||||
+![architecture_proposed ](architecture_proposed.drawio.png)
 
-### Benchmarking
+---
+# How did we evaluate [Apache Iceberg](https://iceberg.apache.org/) for our use cases?
 
-We will be using TPC-DS data on all use cases and the TPC-DS queries on the Data Modelling use cases.
+---
+## Evaluation Criteria
 
-#### What is TPC-DS?
+-
+-
+-
 
-From [Delta vs Iceberg vs hudi](https://databeans-blogs.medium.com/delta-vs-iceberg-vs-hudi-reassessing-performance-cb8157005eb0):
 
-[TPC-DS](https://www.tpc.org/tpcds/default5.asp) is a data warehousing benchmark defined by the Transaction Processing Performance Council ([TPC](https://www.tpc.org/default5.asp)). TPC is a non-profit organization founded by the database community in the late 1980s with the goal of developing benchmarks that may be used objectively to test database system performance by simulating real-world scenarios. “Decision support” is what the “DS” in TPC-DS stands for. The TPC-DS data consists of 25 tables which can vary in total size drom 1GB to 100TB. 
-There are 99 queries in total, ranging from simple aggregations to advanced pattern analysis.
+---
+## TPCDS Benchmarking
 
-It has been used in several benchmarking exercises:
+-
+-
+-
 
-- [Dive deep into AWS Glue 4.0 for Apache Spark](https://aws.amazon.com/blogs/big-data/dive-deep-into-aws-glue-4-0-for-apache-spark/) shows that glue 4.0 is 2.7 times more performant than glue 3.0
-- [Upgrade to Athena engine version 3](https://aws.amazon.com/blogs/big-data/upgrade-to-athena-engine-version-3-to-increase-query-performance-and-access-more-analytics-features/) shows that certain queries with Athena 3.0 can show upto 10 times performance compared with 2.0, and scanned byte reduced by 12 times with Iceberg
+---
+## 
 
-#### Data Generation
+## Data Curation Use Cases
 
-We will be using the [TPC-DS connector for AWS Glue](https://aws.amazon.com/marketplace/pp/prodview-xtty6azr4xgey) to generate the data.
-Note that the connector is only compatible with Glue 3.0 for the moment. For more details please refer to [tpcds-custom-connector-for-glue3](https://github.com/aws-samples/aws-glue-samples/tree/master/GlueCustomConnectors/development/Spark/glue-3.0/tpcds-custom-connector-for-glue3.0#readme).
+1. Full load Bulk Insert and addition of reference columns
 
-- Data Modelling use cases : 1GB
-- Data Engineering uses cases: `store_sales` table at 3TB, which equates to ~8B rows
+2. "Simple" SCD2 where there is only one update per PK which is more recent than the current record
 
-**Criteria:**
-1. Compatibility _ The proposed changes must be compatible with the existing Analytical Platform tool sets, for example dbt which is the recommended tool for creating derived tables
-2. Cost _ Glue/Spark is priced at $0.44 per data processing unit (DPU) per hour. Athena is priced at $5.00 per TB of scanned data
-3. Complexity / Readability _ How easy is it to understand what the code is doing? Can a problem be easily fixed?
-4. Time _ Time it takes for job/query to complete
+3. "Complex" SCD2 where there can be multiple updates per PK as well as [late-arriving records]()
 
-As these batch processes run over night, time is not as important as cost, although there is a direct relationship between time and cost for Glue/Spark. Complexity / Readability is quite subjective and can't be easily measured, we aim to identify a metric/metrics which can be used to compare the different solutions.
+---
+## Results
 
-**Optimizations:**
-- Partitioning / File compaction
-- Multiple indexing
+---
+## Data Derivation Use Cases
+
+---
+## Results
+
+-
+-
+-
+
+---
+# Conclusion, Risks and Roadmap
+
+---
+## Conclusions
+
+-
+-
+-
+
+---
+## Risks
+
+-
+-
+-
+
+---
+## Questions to Answer
+
+1. How to improve performance using sorting, partitions, file compaction etc...
+2. How to leverage DBT and [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table)
+
+---
+## Roadmap
+
+-
+-
+-
+
+
+<style>
+a,h1,h2 {
+    color: #1d70b8;
+}
+a{
+    text-decoration: underline;
+}
+</style>

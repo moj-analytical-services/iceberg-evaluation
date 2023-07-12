@@ -26,9 +26,9 @@ For more detailed instructions and a demo see [introducing-aws-glue-interactive-
 
 Warning: Remove any `default` profiles in your ~/.aws/config or ~/.aws/credentials otherwise the notebook will fail to provision a glue session. 
 
-## Using Jupyter extension for VSCode
+## Jupyter extension for VS Code
 
-[Jupyter extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) provides Jupyter notebook support, allowing you to make use of Visual Studio's features such Intellisense. For more features and benefits of using the extension please refer to this [link](https://code.visualstudio.com/docs/datascience/jupyter-notebooks).
+[Jupyter extension for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) provides Jupyter notebook support, allowing you to make use of Visual Studio's features such Intellisense. For more features and benefits of using the extension please refer to this [link](https://code.visualstudio.com/docs/datascience/jupyter-notebooks).
 
 In order to be able to use the PySpark kernel, you might need to update the kernel specs following [these instructions](https://stackoverflow.com/questions/73994337/cannot-find-pyspark-kernel-aws-glue-interactive-sessions-with-vscode).
 
@@ -46,13 +46,13 @@ You then set these as environment variables in your jupyter notebook using the [
 %dotenv
 ```
 
-## Using VSCode Python Interactive Window
+## VS Code Python Interactive Window
 
-The [VSCode Python Interactive Window](https://code.visualstudio.com/docs/python/jupyter-support-py) allows you to run python code .py files, as well as Jupyter-like code cells, against jupyter IPython kernels. This has the advantage that changes to .py files can be tracked with git, as opposed to Jupyter Notebooks.
+The [VS Code Python Interactive Window](https://code.visualstudio.com/docs/python/jupyter-support-py) allows you to run python code .py files, as well as Jupyter-like code cells, against jupyter IPython kernels. This has the advantage that changes to .py files can be tracked with git, as opposed to Jupyter Notebooks.
 
 To use the Python Interactive Window with a file, use the `Jupyter: Run Current File in Python Interactive Window` command from the Command Palette and make sure to select PySpark kernel.
 
-## Using the AWS Glue docker image
+## AWS Glue docker image
 
 Some parts of this repository have been developed using the [AWS Glue docker image](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html#develop-local-docker-image). Additional AWS guidance on how to use this image can be found [here](https://aws.amazon.com/blogs/big-data/develop-and-test-aws-glue-version-3-0-jobs-locally-using-a-docker-container/) and detailed instructions on its use in this repo can be found in each relevant subdirectory.
 
@@ -76,3 +76,8 @@ docker run -it -v $WORKSPACE_LOCATION:/home/glue_user/workspace/jupyter_workspac
 ```
 
 Open http://127.0.0.1:8888/lab in your web browser in your local machine to see the Jupyter lab UI.
+
+## Marp 
+
+## Draw.IO
+

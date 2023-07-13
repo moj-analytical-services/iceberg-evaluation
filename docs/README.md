@@ -13,7 +13,7 @@ _paginate: skip
 
 1. Why did we decide to investigate [Apache Iceberg](https://iceberg.apache.org/)?
 2. How did we evaluate [Apache Iceberg](https://iceberg.apache.org/) for our use cases?
-4. Conclusion, risks and roadmap
+4. Conclusions, risks and roadmap
 
 ---
 
@@ -47,6 +47,7 @@ See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-
 ## Issues with [Glue PySpark job](https://github.com/ministryofjustice/analytical-platform-data-engineering/blob/main/glue_database/glue_jobs/create_derived_table.py)
 
 1. Performance has degraded over the last few months, with monthly costs quadrupling
+1. Highly nested function structure
 2. Very complex process for handling [data shuffling](https://medium.com/distributed-computing-with-ray/executing-a-distributed-shuffle-without-a-mapreduce-system-d5856379426c) which makes it hard to maintain/debug 
 3. Large volumes of intermittent missing data and duplicates, but given the complexity of the current job, the root-cause could not be identified
 4. Lack of specialist Spark expertise in the team
@@ -63,21 +64,33 @@ See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-
 ## Why Apache Iceberg?
 
 1. Performance is very dependent on [optimisation](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-transparent-tpc-ds-lakehouse-performance-benchmarks)
+2. Community support is comparable
 2. [Ecosystem support](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison):
 
 |Ecosystem|Hudi|Delta Lake|Iceberg|
 |-|-|-|-|
 |AWS Glue|Read+Write|Read+Write|Read+Write|
-|[Trino](https://trino.io/)|Read|Read|Read+Write|
 |Athena|Read|Read|Read+Write|
 
 *Only Iceberg has write-support for Amazon Athena*
 
 ---
+## Why Amazon Athena?
+
+With Iceberg, it's now possible to use Athena to process jobs previously not possible. This has many advantages:
+
+1. Costs based on amount of data scanned instead of resources used which can be much cheaper
+2. Let Amazon Athena determine optimum server?? settings
+3. Unify tech stack across data pipeline:
+  a. Less duplication of code
+  b. Facilate team resource allocation
+
+---
 ## Questions to Answer
 
-1. Can we leverage Apache Iceberg to improve performance and decrease costs?
-2. Can we replace Glue PySpark with Amazon Athena to decrease costs and simplify tech stack?
+1. Can we leverage Apache Iceberg?
+2. How can we leverage modern [glue development options](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html) to faciliate glue script development?
+2. Can we replace Glue PySpark with Amazon Athena?
 3. What is the impact  on Data Derivation processes?
 
 ![architecture_proposed ](architecture_proposed.drawio.png)
@@ -112,10 +125,50 @@ See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-
 3. "Complex" SCD2 where there can be multiple updates per PK as well as [late-arriving records]()
 
 ---
-## Results
+## Components
+
+- PySpark + Iceberg glue job
+- Python Shell +
 
 ---
+## Step Function (demonstrative)
+
+![w:800 center](step_function.png)
+
+---
+
+## Results - 1GB scale
+
+![w:700 center](scale_100.png)
+
+---
+## Results - 3TB scale
+
+![w:700 center](scale_3000.png)
+
+---
+## Code complexity
+
+Used radon to calculates measures of code complexity:
+- Logical Lines Of Code (LLOC)
+- Cyclomatic Complexity (CC)
+- Maintainability Index (MI)
+We compared Athena + Iceberg and Glue PySpark + Iceberg and found theres little difference between the options
+
+
+---
+## Data Curation conclusions
+
+- Athena+Iceberg can handle cdc volumes of 80 million rows against a table of 8 billion rows
+- Our current largest table is ~3 billion rows with daily cdcs of ~1 million
+- All done with 0 optimisation, there are many optimisations we could make to further handle larger volumes (e.g. sorting, partitioning, etc...)
+
+---
+
 ## Data Derivation Use Cases
+- 
+-
+-
 
 ---
 ## Results
@@ -137,7 +190,7 @@ See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-
 ---
 ## Risks
 
--
+- How does updating a table impact read-performance?
 -
 -
 
@@ -162,4 +215,9 @@ a,h1,h2 {
 a{
     text-decoration: underline;
 }
+ul, ol {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 </style>

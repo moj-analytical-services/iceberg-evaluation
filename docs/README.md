@@ -4,10 +4,11 @@ theme: uncover
 paginate: true
 _paginate: skip
 ---
+
+**--DRAFT--**
+
+![w:700 center](https://upload.wikimedia.org/wikipedia/commons/9/95/Apache_Iceberg_Logo.svg)
 # Evaluation
-
-![bg left:40% 80%](https://upload.wikimedia.org/wikipedia/commons/9/95/Apache_Iceberg_Logo.svg)
-
 ---
 ## Overview
 
@@ -22,7 +23,8 @@ _paginate: skip
 ---
 ## Existing Data Pipeline
 
-1. [AWS DMS](https://aws.amazon.com/dms/) to extract full loads and changed data
+Change Colors!!
+1. [AWS DMS](https://aws.amazon.com/dms/) to extract full loads and changed data (cdc)
 2. [AWS Glue PySpark](https://docs.aws.amazon.com/glue/latest/dg/spark_and_pyspark.html) to create curated tables 
 3. [Amazon Athena](https://www.amazonaws.cn/en/athena/) + [DBT](https://www.getdbt.com/) to create derived tables
 4. Data stored in [S3](https://aws.amazon.com/s3/) and metadata in [Glue Data Catalog](https://towardsaws.com/data-cataloging-in-aws-glue-c649fa5be715)
@@ -61,10 +63,19 @@ See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-
 - Allows query engines to identify relevant data files -> minimise data scans and speed up queries
 
 ---
+## Acid Transactions
+
+Row level changes!
+
+-
+-
+-
+
+---
 ## Why Apache Iceberg?
 
 1. Performance is very dependent on [optimisation](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-transparent-tpc-ds-lakehouse-performance-benchmarks)
-2. Community support is comparable
+2. Community support between the 3 options is comparable
 2. [Ecosystem support](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison):
 
 |Ecosystem|Hudi|Delta Lake|Iceberg|
@@ -72,24 +83,26 @@ See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-
 |AWS Glue|Read+Write|Read+Write|Read+Write|
 |Athena|Read|Read|Read+Write|
 
-*Only Iceberg has write-support for Amazon Athena*
-
 ---
 ## Why Amazon Athena?
 
 With Iceberg, it's now possible to use Athena to process jobs previously not possible. This has many advantages:
 
-1. Costs based on amount of data scanned instead of resources used which can be much cheaper
+1. Costs based on amount of data scanned ($5/TB)
 2. Let Amazon Athena determine optimum server?? settings
-3. Unify tech stack across data pipeline:
-  a. Less duplication of code
-  b. Facilate team resource allocation
+3. Unified tech stack across data pipeline
+
+---
+## Glue vs Athena
+
+-
+-
+-
 
 ---
 ## Questions to Answer
 
 1. Can we leverage Apache Iceberg?
-2. How can we leverage modern [glue development options](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html) to faciliate glue script development?
 2. Can we replace Glue PySpark with Amazon Athena?
 3. What is the impact  on Data Derivation processes?
 
@@ -140,6 +153,8 @@ With Iceberg, it's now possible to use Athena to process jobs previously not pos
 ## Results - 1GB scale
 
 ![w:700 center](scale_100.png)
+ 
+Put unit!!!
 
 ---
 ## Results - 3TB scale
@@ -190,15 +205,21 @@ We compared Athena + Iceberg and Glue PySpark + Iceberg and found theres little 
 ---
 ## Risks
 
-- How does updating a table impact read-performance?
--
--
+- Did not have time to investigate:
+  - impact of data skew on write-performance
+  - impact of table-width on write-performance
+  - updating a table impact read-performance
+- Replacing dependency on specialist spark expertise with Iceberg expertise
+- The proposed solution might not be able to handle future volumes
 
 ---
 ## Questions to Answer
 
 1. How to improve performance using sorting, partitions, file compaction etc...
+2. Estimate maximum volume capacity with these optimisations in place
 2. How to leverage DBT and [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table)
+3. How to monitor code complexity with create-a-derived-table and flag violations
+
 
 ---
 ## Roadmap
@@ -207,17 +228,30 @@ We compared Athena + Iceberg and Glue PySpark + Iceberg and found theres little 
 -
 -
 
+---
+# Appendix
+
+---
+## Modern glue development options
+
+These modern [glue development options](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html) helped us to develop and test glue pyspark jobs:
+
+-
+-
+
+
+
+
 
 <style>
 a,h1,h2 {
-    color: #1d70b8;
+  color: #1d70b8;
 }
 a{
-    text-decoration: underline;
+  text-decoration: underline;
 }
 ul, ol {
   margin-left: 0;
   margin-right: 0;
 }
-
 </style>

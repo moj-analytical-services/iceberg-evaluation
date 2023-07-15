@@ -10,29 +10,37 @@ _paginate: skip
 ![w:700 center](https://upload.wikimedia.org/wikipedia/commons/9/95/Apache_Iceberg_Logo.svg)
 # Evaluation
 ---
-## Synopsis
+## Proposal
 
-
+*Existing Data Pipelines*
 ![architecture center](architecture_existing.drawio.png)
+*Proposed Data Pipelines*
 ![architecture_proposed ](architecture_proposed.drawio.png)
 
+---
+## Outcome
+
+Replacing the Glue PySpark curation process in our data pipelines with Iceberg + Athena + DBT means:
+
+1. Significant cost reductions
+2. Code that is less complex and easier to maintain
+3. Unified tech stack which facilitates collaboration
 
 ---
 
 ## Overview
 
-1. Why did we decide to investigate [Apache Iceberg](https://iceberg.apache.org/)?
-2. How did we evaluate [Apache Iceberg](https://iceberg.apache.org/) for our use cases?
+1. Technical Concepts
+2. How did we evaluate for our use cases?
 4. Conclusions, risks and roadmap
 
 ---
 
-# Why did we investigate [Apache Iceberg](https://iceberg.apache.org/)?
+# Technical Concepts
 
 ---
 ## Existing Data Pipeline
 
-Change Colors!!
 1. [AWS DMS](https://aws.amazon.com/dms/) to extract full loads and changed data (cdc)
 2. [AWS Glue PySpark](https://docs.aws.amazon.com/glue/latest/dg/spark_and_pyspark.html) to create curated tables 
 3. [Amazon Athena](https://www.amazonaws.cn/en/athena/) + [DBT](https://www.getdbt.com/) to create derived tables
@@ -42,7 +50,7 @@ Change Colors!!
 See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-data-engineering/) for more details
 
 ---
-## Data Curation processes
+## Data Curation
 
 1. Bulk insert full loads
 2. Impute any deleted rows prior to additional full loads
@@ -83,8 +91,9 @@ Row level changes!
 ---
 ## Why Apache Iceberg?
 
+Comparison of table formats:
 1. Performance is very dependent on [optimisation](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-transparent-tpc-ds-lakehouse-performance-benchmarks)
-2. Community support between the 3 options is comparable
+2. Community support is [comparable](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison)
 2. [Ecosystem support](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison):
 
 |Ecosystem|Hudi|Delta Lake|Iceberg|
@@ -147,10 +156,9 @@ With Iceberg, it's now possible to use Athena to process jobs previously not pos
 3. "Complex" SCD2 where there can be multiple updates per PK as well as [late-arriving records]()
 
 ---
-## Components
+## Data Curation Evaluation Architecture
 
-- PySpark + Iceberg glue job
-- Python Shell +
+![architecture_evaluation](architecture_evaluation.drawio.png)
 
 ---
 ## Step Function (demonstrative)

@@ -6,7 +6,7 @@
 - [Introduction to Apache Hudi](https://bigdataboutique.com/blog/introduction-to-apache-hudi-c83367) A high level introduction to Hudi tables and DeltaStreamer
 - [The Apache Iceberg Open Table Format](https://www.dremio.com/open-source/apache-iceberg/) A high level introduction to Iceberg tables
 
-## Comparisons of Hudi and Iceberg
+## Table format comparisons
 
 - [Lakehouse Feature Comparison](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison) very thorough comparison but written by OneHouse which develops Hudi-based solutions
 - [Comparison of Data Lake Table Formats](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/) Another very thorough comparision but written by Dremio which develops Iceberg-based solutions
@@ -29,6 +29,13 @@
   - A supporting tutorial is [SQL for Athena](https://www.youtube.com/watch?v=V21xjnHMOyk) where he builds a database on S3 purely with AWS Athena with Presto SQL, but with Hive tables. 
 - [https://medium.com/expedia-group-tech/a-short-introduction-to-apache-iceberg-d34f628b6799](https://medium.com/expedia-group-tech/a-short-introduction-to-apache-iceberg-d34f628b6799) A dated but nice high level introduction to Iceberg tables
 - Both Hudi and Iceberg are compatible with AWS LakeFormation (including e.g. column and cell level access). See [here](https://docs.aws.amazon.com/lake-formation/latest/dg/otf-tutorial.html) for the official documentation. For a lab that implements LakeFormation permissions for Hudi see [here](https://catalog.us-east-1.prod.workshops.aws/workshops/976050cc-0606-4b23-b49f-ca7b8ac4b153/en-US/1200/1211-hudi-lakeformation-lab) and for Iceberg see [here](https://catalog.us-east-1.prod.workshops.aws/workshops/976050cc-0606-4b23-b49f-ca7b8ac4b153/en-US/1200/1212-iceberg-lakeformation-lab).
+
+## TPC-DS Benchmarking
+
+- [TPC-DS 3.2 Specification](https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-ds_v3.2.0.pdf)
+- [Dive deep into AWS Glue 4.0 for Apache Spark](https://aws.amazon.com/blogs/big-data/dive-deep-into-aws-glue-4-0-for-apache-spark/) shows that glue 4.0 is 2.7 times more performant than glue 3.0
+- [Upgrade to Athena engine version 3](https://aws.amazon.com/blogs/big-data/upgrade-to-athena-engine-version-3-to-increase-query-performance-and-access-more-analytics-features/) shows that certain queries with Athena 3.0 can show upto 10 times performance compared with 2.0, and scanned byte reduced by 12 times with Iceberg
+- AWS demonstrated how Apache Hudi can speed up [bulk inserts and upserts](https://aws.amazon.com/blogs/big-data/part-1-get-started-with-apache-hudi-using-aws-glue-by-implementing-key-design-concepts/) using the TPC-DS  1TB stores_sales table
 
 ## In-depth Resources
 

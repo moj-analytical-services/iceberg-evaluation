@@ -10,6 +10,15 @@ _paginate: skip
 ![w:700 center](https://upload.wikimedia.org/wikipedia/commons/9/95/Apache_Iceberg_Logo.svg)
 # Evaluation
 ---
+## Synopsis
+
+
+![architecture center](architecture_existing.drawio.png)
+![architecture_proposed ](architecture_proposed.drawio.png)
+
+
+---
+
 ## Overview
 
 1. Why did we decide to investigate [Apache Iceberg](https://iceberg.apache.org/)?
@@ -149,17 +158,19 @@ With Iceberg, it's now possible to use Athena to process jobs previously not pos
 ![w:800 center](step_function.png)
 
 ---
+## Results - Bulk Insert
 
-## Results - 1GB scale
-
-![w:700 center](scale_100.png)
- 
-Put unit!!!
+![w:1100 center](bulk_insert_comparison.png)
+- Athena is cheaper than PySpark at both scales
+- PySpark is faster at larger scales
 
 ---
-## Results - 3TB scale
+## Results - SCD2
 
-![w:700 center](scale_3000.png)
+![w:1100 center](scd2_comparison.png)
+- Athena is consistently cheaper and faster than PySpark
+- PySpark job at 3TB scale failed at all proportions
+- Athena query failed at higher proportions
 
 ---
 ## Code complexity

@@ -17,7 +17,6 @@ section {
 ![w:700 center](https://upload.wikimedia.org/wikipedia/commons/9/95/Apache_Iceberg_Logo.svg)
 # Evaluation
 [MoJ Analytical Platform](https://user-guidance.analytical-platform.service.justice.gov.uk/#content)
-[GitHub Repository](https://github.com/moj-analytical-services/iceberg-evaluation)
 
 ---
 ## Contents
@@ -185,8 +184,8 @@ p, ul, ol {
 ![bg left:60% 80%](architecture_evaluation.drawio.png)
 
 The compute consists  of either:
-1. [Glue PySpark job running SparkSQL queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_engineering/glue_jobs/pyspark_functions.py) 
-2. [Glue Python shell job running Athena queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_engineering/glue_jobs/athena_functions.py) 
+1. [Glue PySpark job running SparkSQL queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_curation/glue_jobs/pyspark_functions.py) 
+2. [Glue Python shell job running Athena queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_curation/glue_jobs/athena_functions.py) 
 
 To ensure fairness we used:
  - similar SQL statements
@@ -294,7 +293,7 @@ section {
 
 ## Repo Structure
 
-
+All the code is available on the [GitHub Repository](https://github.com/moj-analytical-services/iceberg-evaluation)
 
 ---
 ## If we had had more time...
@@ -310,14 +309,6 @@ section {
 Re-evaluate evaluation objectives regularly!
 
 The investigation was initially supposed to compare Glue PySpark against Hudi and Iceberg. We quickly expanded the investigation to include Athena, but wasted time investigating Hudi further  when it was clear Iceberg was the clear winner
-
----
-## Modern glue development options
-
-These modern [glue development options](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html) helped us to develop and test Glue PySpark jobs:
-
-- Hello
--
 
 
 <style>

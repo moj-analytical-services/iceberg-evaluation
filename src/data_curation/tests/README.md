@@ -9,7 +9,7 @@ Run `create_test_data.py` in VSCode Python Interactive Mode (see [contributing](
 To test the pyspark-based functions:
 
 ```
-WORKSPACE_LOCATION=$PWD/src/data_engineering
+WORKSPACE_LOCATION=$PWD/src/data_curation
 
 docker run -it -v $WORKSPACE_LOCATION:/home/glue_user/workspace/ \
     -e AWS_DEFAULT_REGION=eu-west-1 \
@@ -29,5 +29,5 @@ docker run -it -v $WORKSPACE_LOCATION:/home/glue_user/workspace/ \
 Use the python environment created by `requirements-python.txt` to test the athena-based functions:
 
 ```
-pytest src/data_engineering/tests/test_athena_functions.py --log-cli-level=INFO -vv
+pytest src/data_curation/tests/test_athena_functions.py --log-cli-level=INFO -vv
 ```

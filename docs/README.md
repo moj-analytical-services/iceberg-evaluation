@@ -58,11 +58,11 @@ As summarised in [Managed Pipelines](https://ministryofjustice.github.io/analyti
 ![architecture_proposed ](architecture_proposed.drawio.png)
 
 ---
-## Evaluation Outcome
+## Evaluation outcome
 
 1. Iceberg is compatible with the data engineering tool set
 2. Out-of-the-box, Athena + Iceberg is cheaper and more performant for our use cases than Glue PySpark + Iceberg
-3. Iceberg simplifies the curation logic so easier to maintain
+3. Iceberg simplifies the curation logic and is easier to maintain
 
 **Hence we are proceeding with option 2**
 
@@ -78,7 +78,7 @@ section {
 # 2) Technical Concepts
 
 ---
-## Data Curation
+## Data curation processes
 
 1. Bulk insert full loads
 2. Impute any deleted rows prior to additional full loads
@@ -100,21 +100,20 @@ section {
 Could we improve performance and simplify the PySpark job by making use of Iceberg?
 
 ---
-## Data Lake Table Formats
+## Data Lake table formats
 
 - [Table formats](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/) abstract groups of data files as a single "table" so we can treat data lakes like databases
 - [Apache Hive](https://hive.apache.org/), the original table format, defines a table as all the files in one or more particular directories
-- [Modern table format](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/) ([Apache Hudi](https://hudi.apache.org/), Databrick's [Delta Lake](https://delta.io/), and Apache Iceberg) store additional metadata 
-- Allows query engines to identify relevant data files -> minimise data scans and speed up queries
+- [Modern table format](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/) ([Apache Hudi](https://hudi.apache.org/), Databrick's [Delta Lake](https://delta.io/), and Apache Iceberg) store additional metadata and table statistics
+- This allows query engines to better identify relevant data files, minimising data scans and speeding up queries
 
 ---
-## Acid Transactions
+## Other advantages
 
-Row level changes!
+- Ensures ACID (Atomicity, Consistency, Isolation, Durability) guarantees on more types of transactions, such as inserts, deletes, and updates 
+- The option to run these operations concurrently
+- Common workarounds (such as rewriting all the data in all the partitions that need to be changed at the same time and then pointing to the new locations) cause huge data duplication and redundant extract, transform, and load (ETL) jobs
 
--
--
--
 
 ---
 ## Why Apache Iceberg?
@@ -139,7 +138,7 @@ Comparison of table formats:
   - [Sacrifices](https://trino.io/docs/current/admin/fault-tolerant-execution.html) mid-query fault-tolerance for faster execution
   - More effective at [pushing down](https://trino.io/docs/current/optimizer/pushdown.html) operations to the data source which improves performance
 - There is a 30min query [timeout](https://docs.aws.amazon.com/general/latest/gr/athena.html#amazon-athena-limits) but this is a soft limit
-- DBT can manage parallel workloads to minimise [throttling](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html)
+- DBT can manage concurrent workloads to minimise [throttling](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html)
 
 ---
 <style scoped>
@@ -150,7 +149,7 @@ section {
 # 3) Evaluation Methodology
 
 ---
-## Evaluation Criteria
+## Evaluation criteria
 
 In order of importance :
 1. Compatibility with existing tech stack and tool sets
@@ -191,7 +190,7 @@ To ensure fairness we used:
  - out-of-the-box configuration with no optimisations
 
 ---
-## Data Curation data generation
+## Data curation data generation
 
 We used the [TPC-DS connector for AWS Glue](https://aws.amazon.com/marketplace/pp/prodview-xtty6azr4xgey) to generate the TPC-DS `stores_sales` table at scales: 
   - 0.1TB (~290 million rows, 21.1 GB)
@@ -246,16 +245,14 @@ WHEN MATCHED
 ## Data derivation comparison
 
 
-We compared the performance of the [TPC-DS queries](https://github.com/awslabs/aws-athena-query-federation/tree/master/athena-tpcds/src/main/resources/queries) against Iceberg tables relative to Hive tables at 2 scales:
+We compared the performance of the [TPC-DS queries](https://github.com/awslabs/aws-athena-query-federation/tree/master/athena-tpcds/src/main/resources/queries) against Iceberg tables relative to Hive at 2 scales (see [benchmark](https://github.com/moj-analytical-services/iceberg-evaluation/blob/main/src/data_derivation/query_performance/benchmark_3000.ipynb)):
 
 | Scale  | Execution<br>Time |Queue<br>Time | Planning<br>Time | Processing<br>Time |Data<br>Scanned |
 |-|-|-|-|-|-|
-|1GB |2.7x |||| 1.5x|
+|1GB |2.7x |-|-|-| 1.5x|
 |3TB <sup>(partitioned) |1.15x | 1.17x | 0.5x|1.02x|0.87x|
 
-
-
-For a more detailed breakdown by query see the [notebook](https://github.com/moj-analytical-services/iceberg-evaluation/blob/main/src/data_derivation/query_performance/benchmark_3000.ipynb)
+The relative execution time and data scanned varies depending on the scale and partitioning, but within an acceptable range
 
 ---
 ## Compatibility with AP Tools set
@@ -266,7 +263,7 @@ Data engineering have built various [tools](https://user-guidance.analytical-pla
 - [Rdbtools](https://dyfanjones.github.io/noctua/reference/index.html) customises [noctua](https://dyfanjones.github.io/noctua/reference/index.html) for querying databases using R and Athena
 - [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table) customises [dbt](https://docs.getdbt.com/docs/introduction) for creating persistent derived tables using Athena
 
-We verified these tools were compatible with Iceberg tables.
+We verified these tools were compatible with Iceberg tables
 
 ---
 <style scoped>

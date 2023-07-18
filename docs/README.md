@@ -83,7 +83,7 @@ section {
 1. Bulk insert full loads
 2. Impute any deleted rows prior to additional full loads
 3. Remove duplicate data
-3. Apply [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to track how a row changes over time: 
+3. Apply [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to track how a row changes over time, taking into account the possibility of multiple updates to the same key and having an update older than the most recent record:
 
 | id | status | updated_at | valid_from | valid_to |
 | -- | ------ | ---------- | ---------- | ------------ |
@@ -97,7 +97,7 @@ section {
 2. Uses complex process for handling [data shuffling](https://medium.com/distributed-computing-with-ray/executing-a-distributed-shuffle-without-a-mapreduce-system-d5856379426c) which makes it hard to maintain and debug 
 3. Large volumes of intermittent missing data and duplicates, but given the complexity of the current job, the root-cause could not be identified
 
-Could we improve performance and simplify PySpark job by making use of Iceberg?
+Could we improve performance and simplify the PySpark job by making use of Iceberg?
 
 ---
 ## Data Lake Table Formats
@@ -154,21 +154,20 @@ section {
 
 In order of importance :
 1. Compatibility with existing tech stack and tool sets
-2. Minimise running cost
+2. Minimise running costs
 3. Miniminse code complexity / maximise readability
-3. Minimise Running Time
+3. Minimise execution time
 
-Time is less important than cost because our data pipelines consist of batch processes which run over night, although there is a direct relationship between time and cost for Glue PySpark.
+Time is less important than cost because our data pipelines consist of batch processes which run over night, although there is a direct relationship between time and cost for Glue PySpark
 
 ---
 ## TPC-DS Benchmark
 
-- [TPC-DS](https://www.tpc.org/tpcds/default5.asp) is an industry benchmark consisting of: 
+- [TPC-DS](https://www.tpc.org/tpcds/default5.asp) is a data warehousing benchmark consisting of: 
   - 25 tables whose total size can vary (1GB to 100TB) 
-  - 99 queries ranging from simple aggregations to advanced pattern analysis
+  - 99 SQL queries ranging from simple aggregations to advanced pattern analysis
 - AWS used the TPC-DS 1TB `stores_sales` table to demonstrate how Hudi can speed up [bulk inserts and upserts](https://aws.amazon.com/blogs/big-data/part-1-get-started-with-apache-hudi-using-aws-glue-by-implementing-key-design-concepts/) 
-- AWS used the TPC-DS queries against the 3TB scale data to show how Athena 3 can [increase query performance](https://aws.amazon.com/blogs/big-data/upgrade-to-athena-engine-version-3-to-increase-query-performance-and-access-more-analytics-features/)
-- [TPC-DS connector for AWS Glue](https://aws.amazon.com/marketplace/pp/prodview-xtty6azr4xgey) generates TPC-DS datasets
+- AWS used the TPC-DS queries against the 3TB scale data to show how Athena V3 can [increase query performance](https://aws.amazon.com/blogs/big-data/upgrade-to-athena-engine-version-3-to-increase-query-performance-and-access-more-analytics-features/)
 
 ---
 <style scoped>
@@ -184,23 +183,21 @@ p, ul, ol {
 ![bg left:60% 80%](architecture_evaluation.drawio.png)
 
 The compute consists  of either:
-1. [Glue PySpark job running SparkSQL queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_curation/glue_jobs/pyspark_functions.py) 
-2. [Glue Python shell job running Athena queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_curation/glue_jobs/athena_functions.py) 
+1. [Glue PySpark job with Spark SQL queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_curation/glue_jobs/pyspark_functions.py) 
+2. [Glue Python shell job with Athena SQL queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_curation/glue_jobs/athena_functions.py) 
 
 To ensure fairness we used:
  - similar SQL statements
  - out-of-the-box configuration with no optimisations
 
-
-
 ---
 ## Data Curation data generation
 
-Generate TPC-DS `stores_sales` table at:
-- Scales: 
+We used the [TPC-DS connector for AWS Glue](https://aws.amazon.com/marketplace/pp/prodview-xtty6azr4xgey) to generate the TPC-DS `stores_sales` table at scales: 
   - 0.1TB (~290 million rows, 21.1 GB)
   - 3TB (~8 billion rows, 439.9 GB)
-- Proportion of rows updated: 0.1, 1, 10, 99% 
+
+We then used a PySpark job to simulate updates with increasing proportion of rows updated: 0.1, 1, 10, 99% 
 
 By comparison, our largest table `oasys_question`:
 
@@ -215,7 +212,7 @@ By comparison, our largest table `oasys_question`:
 - PySpark is faster at larger scales (dashed square)
 
 ---
-## MERGE and SCD2 Logic
+## MERGE and SCD2 logic
 
 [MERGE](https://www.oreilly.com/library/view/sql-in-a/9780596155322/re31.html) (ANSI-SQL2003) combines UPDATE and INSERT:
 
@@ -232,25 +229,44 @@ WHEN MATCHED
 [Iceberg](https://iceberg.apache.org/docs/latest/spark-writes/#merge-into) supports MERGE INTO by rewriting data files that contain rows that need to be updated. This improves performance and simplifies the logic.
 
 ---
-## SCD2 comparison
+## SCD2 comparison - 100 GB
+
+![w:1100 center](scd2_100GB.png)
+- Athena is consistently cheaper and faster than PySpark
+- However, Athena fails at the highest update proportions
+
+---
+## SCD2 comparison - 3 TB
 
 ![w:1100 center](scd2.png)
-- Athena is consistently cheaper and faster than PySpark
-- PySpark job at 3TB scale failed at all update proportions
-- Athena query failed at higher update proportions
+- PySpark fails at all update proportions
+- Athena fails at the higher update proportion only
 
 ---
-## Deriving from Iceberg tables
+## Data derivation comparison
 
--
+
+We compared the performance of the [TPC-DS queries](https://github.com/awslabs/aws-athena-query-federation/tree/master/athena-tpcds/src/main/resources/queries) against Iceberg tables relative to Hive tables at 2 scales:
+
+| Scale  | Execution<br>Time |Queue<br>Time | Planning<br>Time | Processing<br>Time |Data<br>Scanned |
+|-|-|-|-|-|-|
+|1GB |2.7x |||| 1.5x|
+|3TB <sup>(partitioned) |1.15x | 1.17x | 0.5x|1.02x|0.87x|
+
+
+
+For a more detailed breakdown by query see the [notebook](https://github.com/moj-analytical-services/iceberg-evaluation/blob/main/src/data_derivation/query_performance/benchmark_3000.ipynb)
 
 ---
-## Compatibility with tool set
+## Compatibility with AP Tools set
 
-Data engineering have built various tools and libraries to support data analysis on the MoJ Analytical Platform:
-- data-engineering-database-access:
-- pydbtools
-- Rdbtools
+Data engineering have built various [tools](https://user-guidance.analytical-platform.service.justice.gov.uk/tools/index.html#tools) to support data analysis on the MoJ Analytical Platform for example:
+- [database-access](https://github.com/moj-analytical-services/data-engineering-database-access) grants database access to AP users
+- [pydbtools](https://github.com/moj-analytical-services/pydbtools) customises [awswrangler](https://github.com/aws/aws-sdk-pandas) for querying databases using Python and Athena
+- [Rdbtools](https://dyfanjones.github.io/noctua/reference/index.html) customises [noctua](https://dyfanjones.github.io/noctua/reference/index.html) for querying databases using R and Athena
+- [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table) customises [dbt](https://docs.getdbt.com/docs/introduction) for creating persistent derived tables using Athena
+
+We verified these tools were compatible with Iceberg tables.
 
 ---
 <style scoped>
@@ -266,7 +282,7 @@ section {
 - No time to investigate the impact of:
   - data skew on write-performance
   - table width on write-performance
-  - simultaneously updating a table on read-performance
+  - simultaneously updating and querying a table on read-performance
 - Replacing dependency on specialist Spark expertise with specialist Athena and Iceberg expertise
 - Athena might not be able to handle future volumes
 
@@ -280,35 +296,40 @@ section {
 2. How to best integrate with DBT and [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table)
 3. How to best monitor code complexity and flag violations
 
-
 ---
 ## Roadmap
 
 ![center](roadmap.png)
 
 ---
-
+<style scoped>
+section {
+  text-align: center;
+}
+</style>
 # 5) Appendix
 ---
 
 ## Repo Structure
 
-All the code is available on the [GitHub Repository](https://github.com/moj-analytical-services/iceberg-evaluation)
+For  the code and interim results please refer to the [iceberg-evalution](https://github.com/moj-analytical-services/iceberg-evaluation)
 
 ---
 ## If we had had more time...
 
-- Run Bulk Insert and SCD2 with glue PySpark and Athena against Hive to estimate performance gains against Iceberg
-- Run the TPC-DS 99 queries in Spark SQL to compare performance against Athena
-- Terraform codebase to allow collaborators to easily reproduce the results
-- Investigate SCD2 failure causes to identify origin and improve understanding of Glue PySpark vs Athena
+- Run Bulk Insert and SCD2 with Glue PySpark and Athena against Hive tables to estimate performance gains against Iceberg
+- Run the TPC-DS queries in Spark SQL to compare performance against Athena
+- Terraform the codebase to allow collaborators to more easily reproduce the results
+- Investigate SCD2 failures to identify origin and improve understanding of Glue PySpark vs Athena
 
 ---
 ## Lessons learnt
 
 Re-evaluate evaluation objectives regularly!
 
-The investigation was initially supposed to compare Glue PySpark against Hudi and Iceberg. We quickly expanded the investigation to include Athena, but wasted time investigating Hudi further  when it was clear Iceberg was the clear winner
+The investigation was initially supposed to compare Glue PySpark against Hudi and Iceberg. 
+
+We quickly expanded the investigation to include Athena, but wasted time investigating Hudi further  when it was clear Iceberg was the clear winner for our use cases.
 
 
 <style>
@@ -320,6 +341,9 @@ a {
 }
 p, ul, ol {
   font-size:35px;
+}
+tr, td {
+  font-size:30px;
 }
 ul, ol {
   margin-left: 0;

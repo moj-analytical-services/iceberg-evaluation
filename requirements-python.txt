@@ -7,3 +7,5 @@ jupyter
 python-dotenv
 black
 pytest
+matplotlib
+plotly

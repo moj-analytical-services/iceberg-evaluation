@@ -38,15 +38,14 @@ section {
 ---
 ## Data Pipeline Architecture As-Is
 
-As summarised in [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-data-engineering/):
-1. [AWS DMS](https://aws.amazon.com/dms/) for extracting full loads and changed data (cdc)
-2. [AWS Glue PySpark](https://docs.aws.amazon.com/glue/latest/dg/spark_and_pyspark.html) for creating curated tables and orchestrated using [Step Functions](https://aws.amazon.com/step-functions/)
-3. [Amazon Athena](https://www.amazonaws.cn/en/athena/) for creating derived tables and orchestrated using [DBT](https://www.getdbt.com/) via [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table)
-4. Data stored in [S3](https://aws.amazon.com/s3/) and metadata in [Glue Data Catalog](https://towardsaws.com/data-cataloging-in-aws-glue-c649fa5be715)
-
 ![alt architecture](architecture_existing.drawio.png)
 
+See [Managed Pipelines](https://ministryofjustice.github.io/analytical-platform-data-engineering/) for more details
 
+<!-- 1. [AWS DMS](https://aws.amazon.com/dms/) for extracting full loads and changed data (cdc)
+2. [AWS Glue PySpark](https://docs.aws.amazon.com/glue/latest/dg/spark_and_pyspark.html) for creating curated tables and orchestrated using [Step Functions](https://aws.amazon.com/step-functions/)
+3. [Amazon Athena](https://www.amazonaws.cn/en/athena/) for creating derived tables and orchestrated using [DBT](https://www.getdbt.com/) via [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table)
+4. Data stored in [S3](https://aws.amazon.com/s3/) and metadata in [Glue Data Catalog](https://towardsaws.com/data-cataloging-in-aws-glue-c649fa5be715) -->
 
 ---
 ## Data Pipeline Architecture To-Be

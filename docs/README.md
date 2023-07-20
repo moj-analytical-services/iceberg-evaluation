@@ -375,12 +375,6 @@ section {
 4. How to best publish Iceberg metadata not available in the Data Catalogue
 
 ---
-## Roadmap
-
-Best endeavour!
-![center](roadmap.png)
-
----
 # 5) Appendix
 
 <style scoped>

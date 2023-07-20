@@ -39,7 +39,7 @@ section {
 1. [AWS DMS](https://aws.amazon.com/dms/) for extracting full loads and changed data (cdc)
 
 2. [AWS Glue PySpark](https://docs.aws.amazon.com/glue/latest/dg/spark_and_pyspark.html) for creating curated tables and orchestrated using [Step Functions](https://aws.amazon.com/step-functions/)
-3. [Amazon Athena](https://www.amazonaws.cn/en/athena/) for creating derived tables and orchestrated using [DBT](https://www.getdbt.com/)
+3. [Amazon Athena](https://www.amazonaws.cn/en/athena/) for creating derived tables and orchestrated using [dbt](https://www.getdbt.com/)
 4. Data stored in [S3](https://aws.amazon.com/s3/) and metadata in [Glue Data Catalog](https://towardsaws.com/data-cataloging-in-aws-glue-c649fa5be715)
 
 ![alt architecture](architecture_existing.drawio.png)
@@ -62,16 +62,16 @@ Option 2: Migrate curation to [Athena](https://www.amazonaws.cn/en/athena/) + [D
 2. Iceberg is compatible with the data engineering tool set which facilitates **adoption**
 3. Iceberg **simplifies** the code which makes it easier to maintain
 
-This also unifies the data engineering tech stack which facilitates **collaboration** and minimizes duplication
-
 ##### Hence we are proceeding with option 2
+
+This also unifies the data engineering tech stack which facilitates **collaboration** and minimizes duplication
 
 ---
 ## Lessons learnt
 
 Re-evaluate objectives regularly!
 
-The investigation was initially supposed to compare Glue PySpark against Hudi and Iceberg tables.
+The investigation was initially supposed to compare Glue PySpark against Hudi and Iceberg table formats.
 
 We quickly expanded the investigation to include Athena, but wasted time investigating Hudi further  when it was clear Iceberg was the clear winner for our use cases.
 
@@ -123,13 +123,22 @@ Examples include sorting and grouping by key.
 - This allows query engines to better identify relevant data files, minimising data scans and speeding up queries
 
 
-<!-- 
+<!--
+Apache Hive is a distributed, fault-tolerant data warehouse system that enables analytics at a massive scale.
+Hive transforms HiveQL queries into MapReduce jobs that run on Apache Hadoop. 
+It queries data stored in a distributed storage solution, like the Hadoop Distributed File System (HDFS) or Amazon S3. 
+Hive stores its database and table metadata in a metastore, 
+which is a database or file backed store that enables easy data abstraction and discovery.
+
 Advantages of Hive:
 1. De-facto standard
 2. Works with basically every engine
 2. Can make use of partitions to speed up queries
 3. File format agnostic
 4. Can atomically update a partition
+
+Problems with Hive:
+1. Table scans unless you make efficient use of partitions
 
 Metadata structures are used to define:
 - What is the table?
@@ -142,7 +151,7 @@ Metadata structures are used to define:
 ---
 ## ACID Transactions
 
-- Hive does not support updates or deletes (at least not easily)
+- Hive does not easily support updates or deletes
 - A common work-around is [Write-Audit-Publish (WAP)](https://lakefs.io/blog/data-engineering-patterns-write-audit-publish/) pattern which rewrites all the data, audits it and then points the catalogue to the new location
 - This causes huge data duplication and redundant ETL jobs
 
@@ -153,27 +162,44 @@ Metadata structures are used to define:
 
 Comparison of table formats:
 1. [Performance]((https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-transparent-tpc-ds-lakehouse-performance-benchmarks)) is very dependent on optimisation
-
 2. [Community support](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison) is comparable
-3. [Ecosystem support](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison) is more varied and Athena supports read, write, and DDL queries for [Apache Iceberg tables](https://docs.aws.amazon.com/athena/latest/ug/querying-iceberg.html) only:
+3. [Ecosystem support](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison) is more varied:
 
 |Ecosystem|Hudi|Delta Lake|Iceberg|
 |-|-|-|-|
-|AWS Glue|Read+Write|Read+Write|Read+Write|
-|Athena|Read|Read|Read+Write|
+|AWS Glue PySpark|Read+Write+DDL|Read+Write+DDL|Read+Write+DDL|
+|Amazon Athena|Read|Read|Read+Write+DDL|
+
+Athena has more support for Iceberg tables. This makes it a viable alternative to AWS Glue PySpark for ETL.
+
+<!-- 
+Data Definition Language [DDL](https://en.wikipedia.org/wiki/Data_definition_language) queries. 
+In the context of SQL, data definition or data description language (DDL) is a syntax for creating and modifying database objects such as tables, indices, and users. 
+DDL statements are similar to a computer programming language for defining data structures, especially database schemas. 
+Common examples of DDL statements include CREATE, ALTER, and DROP. 
+-->
 
 ---
 ## Why Amazon Athena?
  
+- Athena runs queries in a distributed query engine using [Trino](https://trino.io/) under the hood
 - Athena has many advantages over Glue PySpark:
   - Costs based on amount of data scanned ($5/TB)
   - Determines optimum cluster query settings dynamically
   - [Sacrifices](https://trino.io/docs/current/admin/fault-tolerant-execution.html) mid-query fault-tolerance for faster execution
   - More effective at [pushing down](https://trino.io/docs/current/optimizer/pushdown.html) operations
-
 - Athena [V3](https://aws.amazon.com/blogs/big-data/upgrade-to-athena-engine-version-3-to-increase-query-performance-and-access-more-analytics-features/) better integrated with Data Catalog and Iceberg
 - 30min query [timeout](https://docs.aws.amazon.com/general/latest/gr/athena.html#amazon-athena-limits) is a soft limit
-- DBT can manage concurrent workloads to minimise [throttling](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html)
+- Athena in conjunction with dbt can be used for ETL
+- dbt can manage concurrent workloads to minimise [throttling](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html)
+
+<!-- 
+Why DBT?
+write custom business logic using SQL
+automate data quality testing
+deploy the code
+publish documentation side-by-side with the code 
+-->
 
 ---
 # 3) Evaluation Methodology
@@ -189,12 +215,15 @@ section {
 
 In order of importance :
 1. Compatibility with existing tech stack and tool sets
-
 2. Minimise running costs
 3. Minimise code complexity / maximise readability
 3. Minimise execution time
 
-Time is less important than cost because our data pipelines consist of batch processes which run over night, although there is a direct relationship between time and cost for Glue PySpark
+
+- Time is less important because use daily batch processes which run over night
+- Time is still relevant because:
+  - there is a direct relationship between time and cost for Glue PySpark
+  - Athena has run time limitations
 
 ---
 ## TPC-DS Benchmark
@@ -208,7 +237,7 @@ AWS often uses TPC-DS for example to validate:
 - Athena V3 can [increase query performance](https://aws.amazon.com/blogs/big-data/upgrade-to-athena-engine-version-3-to-increase-query-performance-and-access-more-analytics-features/)
 
 ---
-# Data curation evaluation architecture
+## Data curation evaluation architecture
 
 ![bg right:50% 80%](architecture_evaluation.drawio.png)
 
@@ -238,7 +267,7 @@ To ensure fairness we used:
 ## Bulk Insert comparison
 
 ![w:1100 center](bulk_insert.png)
-- Athena (green) is cheaper than PySpark (red) at both scales
+- Athena (blue) is cheaper than PySpark (orange) at both scales
 - PySpark is faster at larger scales (dashed square)
 
 ---
@@ -256,15 +285,15 @@ WHEN MATCHED
    THEN INSERT [( column[, ...] )] VALUES ( expression[, ...] )
 ```
 
-[Iceberg](https://iceberg.apache.org/docs/latest/spark-writes/#merge-into) supports MERGE INTO by rewriting data files that contain rows that need to be updated. 
+- Iceberg supports [MERGE INTO](https://iceberg.apache.org/docs/latest/spark-writes/#merge-into) by rewriting data files that contain rows that need to be updated
 
-<!-- This improves performance and simplifies the logic. -->
+- This improves performance and simplifies the code
 
 ---
 ## SCD2 comparison - 100 GB
 
 ![w:1100 center](scd2_100GB.png)
-- Athena is consistently cheaper and faster than PySpark
+- Athena is consistently cheaper and faster than PySpark, by a massive margin
 - However, Athena fails at the highest update proportions
 
 ---
@@ -272,18 +301,20 @@ WHEN MATCHED
 
 ![w:1100 center](scd2.png)
 - PySpark fails at all update proportions
-- Athena fails at the higher update proportion only
+- Athena passes at the lower update proportions, as per our use cases
 
 ---
-## Data derivation comparison
+## Data derivation evaluation
+
+We used the TPC-DS queries as a subsitute for data derivation processes
 
 **Stats for TPC-DS queries against Iceberg tables relative to Hive:**
 | Scale  | Partitioned| File Size| Execution Time |Data Scanned |
 |-|-|-|-|-|
-|[1GB](https://github.com/moj-analytical-services/iceberg-evaluation/blob/main/src/data_derivation/query_performance/benchmark.ipynb)|No| -|2.7x| 1.5x|
-|[3TB](https://github.com/moj-analytical-services/iceberg-evaluation/blob/main/src/data_derivation/query_performance/benchmark_3000.ipynb) |Yes|0.03|1.2x | 0.9x|
+|[1GB](https://github.com/moj-analytical-services/iceberg-evaluation/blob/main/src/data_derivation/query_performance/benchmark.ipynb)|No| 0.7x|2.7x| 1.5x|
+|[3TB](https://github.com/moj-analytical-services/iceberg-evaluation/blob/main/src/data_derivation/query_performance/benchmark_3000.ipynb) |Yes|0.03x|1.2x | 0.9x|
 
-Note that the 3TB Hive dataset was optimised, unlike the Iceberg dataset and we still obtained comparable performance.
+Note that the 3TB Hive dataset was optimised, unlike for the Iceberg dataset, and we still obtained comparable performance.
 
 <!-- The relative execution time and data scanned varies depending on the scale and partitioning, but within an acceptable range. -->
 
@@ -341,11 +372,7 @@ section {
 2. How to best scale up for full refreshes in a disaster recovery scenario
 2. How to best integrate with DBT and [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table)
 3. How to best monitor code complexity and flag violations
-
----
-## Roadmap
-
-![center](roadmap.png)
+4. How to best publish Iceberg metadata not available in the Data Catalogue
 
 ---
 # 5) Appendix
@@ -357,7 +384,21 @@ section {
 }
 </style>
 ---
+## Contributors
 
+David Bridgwood
+Chris Foufoulides
+Gwion Aprhobat
+Khristiania Raihan
+Soumaya Mauthoor
+Theodore Manassis
+William Orr
+
+## Acknowledgements
+
+Alex Vilela, Anis Khan, Calum Barnett
+
+---
 ## Codebase
 
 For  the code and interim results please refer to the [iceberg-evalution](https://github.com/moj-analytical-services/iceberg-evaluation) GitHub repo
@@ -372,7 +413,7 @@ For  the code and interim results please refer to the [iceberg-evalution](https:
 - Investigate SCD2 failures to identify origin and improve understanding of Glue PySpark vs Athena
 
 ---
-## Iceberg [Metadata](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/)
+## Iceberg Metadata
 
 ![bg right:40% 60%](https://iceberg.apache.org/img/iceberg-metadata.png)
 
@@ -381,6 +422,19 @@ Apache Iceberg’s approach is to define the table through three categories of m
 - “metadata files” that define the table
 - “manifest lists” that define a snapshot of the table
 - “manifests” that define groups of data files that may be part of one or more snapshots
+
+[source](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/)
+
+---
+## Athena Resource limits
+
+When you submit a query, the Athena engine query planner estimates the compute capacity required to run the query and prepares a cluster of compute nodes accordingly. 
+
+Some queries like DDL queries run on only one node. Complex queries over large data sets run on much bigger clusters. The nodes are uniform, with the same memory, CPU, and disk configurations. Athena scales out, not up, to process more demanding queries.
+
+Sometimes the demands of a query exceed the resources available to the cluster running the query. The resource most commonly exhausted is memory, but in rare cases it can also be disk space. 
+
+[source](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html)
 
 <style>
 section {

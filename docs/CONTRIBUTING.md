@@ -77,7 +77,10 @@ docker run -it -v $WORKSPACE_LOCATION:/home/glue_user/workspace/jupyter_workspac
 
 Open http://127.0.0.1:8888/lab in your web browser in your local machine to see the Jupyter lab UI.
 
-## Marp 
+## Marp
 
-## Draw.IO
+We used [marp](https://marp.app) and the [Marp extension for VSCode](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) to create the markdown-based presentation . We then exported the presentation to HMTL and published to GitHub Pages.
 
+## Draw.IO VS Code Extension
+
+We used the [Draw.IO VS Code Extension](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio) to create the various diagrams.

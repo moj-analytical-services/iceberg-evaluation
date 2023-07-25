@@ -1,3 +1,4 @@
+
 import pytest
 import sys
 import pandas as pd
@@ -9,11 +10,26 @@ from pyspark.context import SparkConf
 from glue_jobs.pyspark_functions import * 
 from tests.compare_df import assert_df_equality
 
+
+
+
+
+
+
+
 bucket_name = "sb-test-bucket-ireland"
 key = "tpcds_test"
-directory = f"s3://{bucket_name}/{key}"
 compute = "glue_iceberg"
 database_name = "tpcds_test"
+bucket_prefix = "sb"
+table_name = "datagensb"
+warehouse_path = f"s3://{bucket_name}/{bucket_prefix}"
+directory = f"s3://{bucket_name}/{key}"
+
+
+
+
+
 
 @pytest.fixture(scope="module", autouse=True)
 def glue_context():

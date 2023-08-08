@@ -18,7 +18,7 @@ def _getOptionalResolvedOptions(arguments):
         args_dict[arg_name] = arg_value
     return args_dict
     
-def bulk_insert(full_load_path,output_directory,future_end_datetime):
+def bulk_insert(full_load_path,output_directory,future_end_datetime,spark):
     
     # read the bulk insert parquet file
     full_load=spark.read.parquet(full_load_path)
@@ -37,7 +37,8 @@ def bulk_insert(full_load_path,output_directory,future_end_datetime):
 
     
     
-def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary_key):
+def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary_key,spark):
+    table_name = "datagensb"
     # read the new updates parquet file
     updates = spark.read.option("header", "true").parquet(updates_filepath)
     # adds 3 new columns
@@ -138,7 +139,8 @@ def scd2_simple(updates_filepath, output_directory, future_end_datetime, primary
 
     
     
-def scd2_complex(updates_filepath, output_directory, future_end_datetime, primary_key):
+def scd2_complex(updates_filepath, output_directory, future_end_datetime, primary_key,spark):
+    table_name = "datagensb"
     # read the new updates parquet file
     updates = spark.read.option("header", "true").parquet(updates_filepath)
     # adds 3 new columns

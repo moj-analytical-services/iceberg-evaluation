@@ -106,11 +106,8 @@ def spark():
 
 def test_bulk_insert(glue_context,spark):
 
-    
     bulk_insert(f"{input_path}/full_load", output_directory, future_end_datetime,spark)
-    #output_directory = f'{output_directory}_bulkinsert'
     actual_df = pd.read_parquet(f"s3://{bucket_name}/{input_prefix}/bulk_insert")
-    #expected_df = pd.read_parquet(output_directory)
     expected_df = spark.table(output_directory).toPandas()
     assert_df_equality(expected_df,actual_df)
     

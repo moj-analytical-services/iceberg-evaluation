@@ -51,7 +51,7 @@ Option 1: Convert curated tables to [Iceberg](https://iceberg.apache.org/) table
 
 ![architecture_proposed_pyspark](architecture_proposed_pyspark.drawio.png)
 
-Option 2: Migrate curation to [Athena](https://www.amazonaws.cn/en/athena/) + [DBT](https://www.getdbt.com/) in conjunction with Iceberg
+Option 2: Migrate curation to [Athena](https://www.amazonaws.cn/en/athena/) + [dbt](https://www.getdbt.com/) in conjunction with Iceberg
 
 ![architecture_proposed ](architecture_proposed.drawio.png)
 
@@ -88,20 +88,24 @@ section {
 ## Data curation processes
 
 1. Bulk insert full loads
-2. Impute any deleted rows prior to additional full loads
 3. Remove duplicate data
-3. Apply [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to track how a row changes over time, taking into account multiple and late-arriving updates:
+3. Apply [Type 2 Slowly Changing Dimension (SCD2)](https://en.wikipedia.org/wiki/Slowly_changing_dimension) to track row changes over time:
 
-| id | status | updated_at | valid_from | valid_to |
-| -- | ------ | ---------- | ---------- | ------------ |
-| 1 | pending | 2019-01-01 | 2019-01-01 | 2019-01-02 |
-| 1 | shipped | 2019-01-02 | 2019-01-02 | `null` |
+| id | status | updated_at | valid_from | valid_to | is_current |
+| -- | ------ | ---------- | ---------- | ------------ |-|
+| 1 | pending | 2019-01-01 | 2019-01-01 | 2019-01-02 | False|
+| 1 | shipped | 2019-01-02 | 2019-01-02 | `null` | True |
+
+SCD2 is difficult because:
+
+- Deltas can contain multiple and/or late-arriving updates
+- Requires updating historic records
 
 ---
 ## Issues with [Glue PySpark job](https://github.com/ministryofjustice/analytical-platform-data-engineering/blob/main/glue_database/glue_jobs/create_derived_table.py)
 
 1. Performance has degraded over the last few months, with monthly costs quadrupling
-2. Uses complex process for handling [data shuffling](https://medium.com/distributed-computing-with-ray/executing-a-distributed-shuffle-without-a-mapreduce-system-d5856379426c) which makes it hard to maintain and debug 
+2. Uses complex process for handling [data shuffling](https://medium.com/distributed-computing-with-ray/executing-a-distributed-shuffle-without-a-mapreduce-system-d5856379426c) which makes it hard to maintain 
 3. Large volumes of intermittent missing data and duplicates, but given the complexity of the current job, the root-cause could not be identified
 
 Could we improve performance and simplify the PySpark job by making use of Iceberg?
@@ -152,7 +156,10 @@ Metadata structures are used to define:
 ## ACID Transactions
 
 - Hive does not easily support updates or deletes
-- A common work-around is [Write-Audit-Publish (WAP)](https://lakefs.io/blog/data-engineering-patterns-write-audit-publish/) pattern which rewrites all the data, audits it and then points the catalogue to the new location
+- A common work-around is [Write-Audit-Publish (WAP)](https://lakefs.io/blog/data-engineering-patterns-write-audit-publish/) pattern:
+  1. Rewrite sections or all of the data to a staging location
+  2. Audit the new data
+  3. Replace the exising data or point the data catalogue to the new location
 - This causes huge data duplication and redundant ETL jobs
 
 - Modern table formats ensures [ACID guarantees](https://www.dremio.com/blog/comparison-of-data-lake-table-formats-apache-iceberg-apache-hudi-and-delta-lake/) on inserts, deletes, and updates, with the option to run these operations concurrently
@@ -170,7 +177,8 @@ Comparison of table formats:
 |AWS Glue PySpark|Read+Write+DDL|Read+Write+DDL|Read+Write+DDL|
 |Amazon Athena|Read|Read|Read+Write+DDL|
 
-Athena has more support for Iceberg tables. This makes it a viable alternative to AWS Glue PySpark for ETL.
+Athena only has write and DDL support for Iceberg tables
+=> **Iceberg makes Athena  a viable alternative to AWS Glue PySpark for ETL**
 
 <!-- 
 Data Definition Language [DDL](https://en.wikipedia.org/wiki/Data_definition_language) queries. 
@@ -187,14 +195,16 @@ Common examples of DDL statements include CREATE, ALTER, and DROP.
   - Costs based on amount of data scanned ($5/TB)
   - Determines optimum cluster query settings dynamically
   - [Sacrifices](https://trino.io/docs/current/admin/fault-tolerant-execution.html) mid-query fault-tolerance for faster execution
-  - More effective at [pushing down](https://trino.io/docs/current/optimizer/pushdown.html) operations
+  - Shallower learning curve
 - Athena [V3](https://aws.amazon.com/blogs/big-data/upgrade-to-athena-engine-version-3-to-increase-query-performance-and-access-more-analytics-features/) better integrated with Data Catalog and Iceberg
-- 30min query [timeout](https://docs.aws.amazon.com/general/latest/gr/athena.html#amazon-athena-limits) is a soft limit
+- Athena has various [service quotas](https://docs.aws.amazon.com/athena/latest/ug/service-limits.html) but these can be increased 
 - Athena in conjunction with dbt can be used for ETL
 - dbt can manage concurrent workloads to minimise [throttling](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html)
 
 <!-- 
-Why DBT?
+Trino can push down the processing of queries, or parts of queries, into the connected data source: https://trino.io/docs/current/optimizer/pushdown.html
+
+Why dbt?
 write custom business logic using SQL
 automate data quality testing
 deploy the code
@@ -223,7 +233,7 @@ In order of importance :
 - Time is less important because use daily batch processes which run over night
 - Time is still relevant because:
   - there is a direct relationship between time and cost for Glue PySpark
-  - Athena has run time limitations
+  - Athena has run time quotas
 
 ---
 ## TPC-DS Benchmark
@@ -370,7 +380,7 @@ section {
 2. How to best improve Athena [query performance](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html) using sorting, partitions, file compaction etc...
 2. What is the maximum volume capacity with these optimisations in place?
 2. How to best scale up for full refreshes in a disaster recovery scenario
-2. How to best integrate with DBT and [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table)
+2. How to best integrate with dbt and [create-a-derived-table](https://github.com/moj-analytical-services/create-a-derived-table)
 3. How to best monitor code complexity and flag violations
 4. How to best publish Iceberg metadata not available in the Data Catalogue
 

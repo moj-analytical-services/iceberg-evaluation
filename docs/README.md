@@ -8,6 +8,8 @@ _paginate: skip
 ![w:700 center](https://upload.wikimedia.org/wikipedia/commons/9/95/Apache_Iceberg_Logo.svg)
 # Evaluation
 [MoJ Analytical Platform](https://user-guidance.analytical-platform.service.justice.gov.uk/#content)
+Codebase: [iceberg-evalution](https://github.com/moj-analytical-services/iceberg-evaluation)
+
 
 <style scoped>
 section {
@@ -42,18 +44,18 @@ section {
 3. [Amazon Athena](https://www.amazonaws.cn/en/athena/) for creating derived tables and orchestrated using [dbt](https://www.getdbt.com/)
 4. Data stored in [S3](https://aws.amazon.com/s3/) and metadata in [Glue Data Catalog](https://towardsaws.com/data-cataloging-in-aws-glue-c649fa5be715)
 
-![alt architecture](architecture_existing.drawio.png)
+![alt architecture](images/architecture_existing.drawio.png)
 
 ---
 ## Data Pipeline Architecture To-Be
 
 Option 1: Convert curated tables to [Iceberg](https://iceberg.apache.org/) table format
 
-![architecture_proposed_pyspark](architecture_proposed_pyspark.drawio.png)
+![architecture_proposed_pyspark](images/architecture_proposed_pyspark.drawio.png)
 
 Option 2: Migrate curation to [Athena](https://www.amazonaws.cn/en/athena/) + [dbt](https://www.getdbt.com/) in conjunction with Iceberg
 
-![architecture_proposed ](architecture_proposed.drawio.png)
+![architecture_proposed ](images/architecture_proposed.drawio.png)
 
 ---
 ## Outcome
@@ -249,7 +251,7 @@ AWS often uses TPC-DS for example to validate:
 ---
 ## Data curation evaluation architecture
 
-![bg right:50% 80%](architecture_evaluation.drawio.png)
+![bg right:50% 80%](images/architecture_evaluation.drawio.png)
 
 The compute consists  of:
 1. [Glue PySpark job with Spark SQL queries](https://github.com/moj-analytical-services/iceberg-evaluation/blob/add-write-up/src/data_curation/glue_jobs/pyspark_functions.py) 
@@ -276,7 +278,7 @@ To ensure fairness we used:
 ---
 ## Bulk Insert comparison
 
-![w:1100 center](bulk_insert.png)
+![w:1100 center](images/bulk_insert.png)
 - Athena (blue) is cheaper than PySpark (orange) at both scales
 - PySpark is faster at larger scales (dashed square)
 
@@ -302,14 +304,14 @@ WHEN MATCHED
 ---
 ## SCD2 comparison - 100 GB
 
-![w:1100 center](scd2_100GB.png)
+![w:1100 center](images/scd2_100GB.png)
 - Athena is consistently cheaper and faster than PySpark, by a massive margin
 - However, Athena fails at the highest update proportions
 
 ---
 ## SCD2 comparison - 3 TB
 
-![w:1100 center](scd2.png)
+![w:1100 center](images/scd2.png)
 - PySpark fails at all update proportions
 - Athena passes at the lower update proportions, as per our use cases
 
@@ -408,11 +410,6 @@ William Orr
 ## Acknowledgements
 
 Alex Vilela, Anis Khan, Calum Barnett
-
----
-## Codebase
-
-For  the code and interim results please refer to the [iceberg-evalution](https://github.com/moj-analytical-services/iceberg-evaluation) GitHub repo
 
 ---
 ## If we had had more time...

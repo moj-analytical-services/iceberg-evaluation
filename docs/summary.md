@@ -7,7 +7,7 @@ _paginate: skip
 
 ## The Past
 
-![architecture_proposed_pyspark](images/architecture_proposed_pyspark.drawio.png)
+![architecture_existing](images/architecture_existing.drawio.png)
 
 ## The Present
 

@@ -79,7 +79,9 @@ Open http://127.0.0.1:8888/lab in your web browser in your local machine to see 
 
 ## Marp
 
-We used [marp](https://marp.app) and the [Marp extension for VSCode](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) to create the markdown-based presentation . We then exported the presentation to HMTL and published to GitHub Pages.
+We used [marp](https://marp.app) and the [Marp extension for VSCode](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode) to create the markdown-based presentation. We then exported the presentation to HMTL and published to GitHub Pages.
+
+To view the summary.html page you'll need to paste the url to https://htmlpreview.github.io/.
 
 ## Draw.IO VS Code Extension
 

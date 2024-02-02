@@ -15,7 +15,7 @@
 - [Transparent TPC-DS Lakehouse Performance Benchmarks](https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-transparent-tpc-ds-lakehouse-performance-benchmarks) A riposte by OneHouse disputing the results from the previous blog
 - [Data Lake / Lakehouse Guide](https://airbyte.com/blog/data-lake-lakehouse-guide-powered-by-table-formats-delta-lake-iceberg-hudi) An overview and comparison of data lakehouse formats written by a neutral party
 - [Benchmarking Open Table Formats](https://brooklyndata.co/blog/benchmarking-open-table-formats) Performance comparison of delta lake and iceberg, also by a neutral company
-
+- [Choosing an open table format for your transactional data lake on AWS](https://aws.amazon.com/blogs/big-data/choosing-an-open-table-format-for-your-transactional-data-lake-on-aws/) This post compares the features and capabilities of Hudi, Iceberg and Delta Lake to support various use cases
 
 ## AWS Interoperability
 

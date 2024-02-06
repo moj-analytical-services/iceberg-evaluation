@@ -37,10 +37,10 @@ Codebase: [iceberg-evalution](https://github.com/moj-analytical-services/iceberg
 
 # Context
 
+- Store data in AWS Data Lake
 - Use AWS DMS to extract full and changed data
 - Use AWS Glue to dedupe and version data (SCD2)
 - Use AWS Athena to derive new tables 
-- Process data incrementally, but replace target table every time
 - Tables can very in size from 10 - 3B rows (~100GB)
 
 ![architecture_existing](../images/architecture_existing.drawio.png)
@@ -49,10 +49,10 @@ Codebase: [iceberg-evalution](https://github.com/moj-analytical-services/iceberg
 
 # Challenges
 
-- Cost of AWS Glue Job quadrupled!
+- Cost of AWS Glue job quadrupled!
 - Performance of AWS Glue job degraded
 - Large volumes of intermittent missing data and duplicates
-- Difficult to debug/maintain complex glue job
+- Glue job difficult to debug/maintain 
 
 \
 ![architecture_existing_problems](../images/architecture_existing_problems.drawio.png)
@@ -63,14 +63,15 @@ Codebase: [iceberg-evalution](https://github.com/moj-analytical-services/iceberg
 
 ## Things we needed
 
+1. Compatible with existing tech stack
+1. Cost effective
 1. Reliable / Resilient curation architecture
-2. Cost effective
-3. Easy to implement and for new data engineers to pick up
+1. Easy to implement and for new data engineers to pick up
 
 ## Things we liked
 
 1. Compatible with other data pipelines
-2. Compatible with existing tech stack
+
 
 ---
 

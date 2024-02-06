@@ -30,8 +30,8 @@ Codebase: [iceberg-evalution](https://github.com/moj-analytical-services/iceberg
 - ## Options
 - ## Evaluation
 - ## Outcome
-- ## Lessons Learnt
 - ## Further Work
+- ## Lessons Learnt
 
 ---
 
@@ -59,19 +59,32 @@ Codebase: [iceberg-evalution](https://github.com/moj-analytical-services/iceberg
 
 ---
 
+<style scoped>
+section {
+    columns: 2;
+    display: block;
+}
+h1 {
+    column-span: all;
+}
+h2 {
+    break-before: column;
+}
+</style>
+
 # Scope
 
 ## Things we needed
 
 1. Compatible with existing tech stack
 1. Cost effective
-1. Reliable / Resilient curation architecture
+1. Reliable / Resilient architecture
 1. Easy to implement and for new data engineers to pick up
 
 ## Things we liked
 
-1. Compatible with other data pipelines
-
+1. Reasonable running time
+2. Compatible with other data pipelines
 
 ---
 
@@ -122,9 +135,15 @@ Out-of-the-box, Athena + Iceberg is **cheaper** and more **performant** for our 
 - We have already migrated 2 pipelines, and are in the process of migrating 2 more
 - Achieved a cost reduction of 99%, and estimate cost savings of ~380K this year
 
-
 ![architecture_extension ](../images/architecture_extension.drawio.png)
 
+---
+
+# Further Work
+
+- Support snapshots (in progress)
+- Build incremental pipelines to speed up run-time
+- Analyse and publish run and test metrics
 
 ---
 
@@ -134,19 +153,12 @@ Out-of-the-box, Athena + Iceberg is **cheaper** and more **performant** for our 
 
 Don't make any assumptions! The downstream pipelines were already using Athena and dbt for scheduling.
 
-dbt is better suited for customised models, as opposed to running the same process against a large number of tables
+dbt is better suited for customised models, as opposed to running the same process against a large number of tables.
 
 ### Scale-out vs scale-up
 
 We evaluated the impact of scale-up i.e. what happens as the number of rows increases. We did not evaluate the impact of scale-out i.e. what happens as the number of tables increases.
 
----
-
-# Further Work
-
-- Support snapshots (in progress)
-- Build incremental pipelines to speed up run-time
-- Analyse and publish run and test metrics
 
 <style>
 section {

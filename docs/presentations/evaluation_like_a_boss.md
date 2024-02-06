@@ -43,7 +43,7 @@ Codebase: [iceberg-evalution](https://github.com/moj-analytical-services/iceberg
 - Process data incrementally, but replace target table every time
 - Tables can very in size from 10 - 3B rows (~100GB)
 
-![architecture_existing](/docs/images/architecture_existing.drawio.png)
+![architecture_existing](../images/architecture_existing.drawio.png)
 
 ---
 
@@ -55,7 +55,7 @@ Codebase: [iceberg-evalution](https://github.com/moj-analytical-services/iceberg
 - Difficult to debug/maintain complex glue job
 
 \
-![architecture_existing_problems](/docs/images/architecture_existing_problems.drawio.png)
+![architecture_existing_problems](../images/architecture_existing_problems.drawio.png)
 
 ---
 
@@ -90,11 +90,11 @@ Iceberg was the clear winner for our use case because of enhanced Athena support
 
 Option 1: Use Glue PySpark and [Iceberg](https://iceberg.apache.org/) orchestrated using Step Functions
 
-![architecture_proposed_pyspark](/docs/images/architecture_proposed_pyspark.drawio.png)
+![architecture_proposed_pyspark](../images/architecture_proposed_pyspark.drawio.png)
 
 Option 2: Use [Athena](https://www.amazonaws.cn/en/athena/) and [Iceberg](https://iceberg.apache.org/) orchestrated using [dbt](https://www.getdbt.com/)
 
-![architecture_proposed ](/docs/images/architecture_proposed.drawio.png)
+![architecture_proposed ](../images/architecture_proposed.drawio.png)
 
 ---
 
@@ -102,7 +102,7 @@ Option 2: Use [Athena](https://www.amazonaws.cn/en/athena/) and [Iceberg](https:
 
 ### Curate 0.1TB [TPCDS](https://www.tpc.org/tpcds/) stores_sales table (~0.3B rows, 21 GB)
 
-![](/docs/images/scd2_100GB.png)
+![](../images/scd2_100GB.png)
 
 ---
 
@@ -110,7 +110,7 @@ Option 2: Use [Athena](https://www.amazonaws.cn/en/athena/) and [Iceberg](https:
 
 ### Curate 3TB TPCDS stores_sales table (~8B rows, 440 GB)
 
-![](/docs/images/scd2.png)
+![](../images/scd2.png)
 
 Out-of-the-box, Athena + Iceberg is **cheaper** and more **performant** for our use cases than Glue PySpark + Iceberg
 
@@ -122,7 +122,7 @@ Out-of-the-box, Athena + Iceberg is **cheaper** and more **performant** for our 
 - Achieved a cost reduction of 99%, and estimate cost savings of ~380K this year
 
 
-![architecture_extension ](/docs/images/architecture_extension.drawio.png)
+![architecture_extension ](../images/architecture_extension.drawio.png)
 
 
 ---
